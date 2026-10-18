@@ -1,0 +1,463 @@
+﻿:root{--yellow:#ffd400;--yellow-strong:#f5c400;--yellow-soft:#fff8d7;--ink:#111a36;--muted:#667085;--border:#e5e7eb;--cream:#fffdf7;--line:#e8e7e2}*{box-sizing:border-box}html,body,#app{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;color:var(--ink)}body{background:var(--cream)}button,input{font:inherit}.hidden{display:none!important}.app-shell{min-height:100vh;background:var(--cream)}
+.topbar{height:68px;background:#fff;border-bottom:3px solid var(--yellow);display:flex;align-items:center;justify-content:space-between;padding:0 22px;gap:24px}.brand-line h1{margin:0;font-size:21px;line-height:1.05;font-weight:800;color:#111a36}.brand-line p{margin:5px 0 0;font-size:12px;color:#667085}.top-actions{display:flex;align-items:center;gap:14px}.identity-context{display:flex;flex-direction:column;align-items:flex-end;line-height:1.12}.identity-context strong{font-size:12px;color:#111827}.identity-context span{margin-top:4px;font-size:10px;color:#8a6c13}.logout-button{width:38px;height:38px;border:1px solid #e4dfc9;border-radius:8px;background:#fff;display:grid;place-items:center;color:#111;cursor:pointer}.logout-button:hover{background:var(--yellow-soft)}.logout-button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.page{width:min(1190px,calc(100% - 42px));margin:0 auto;padding:20px 0 34px}.summary-tools{display:flex;align-items:center;gap:10px;margin-bottom:16px}.search-wrap{height:38px;flex:1;background:#fff;border:1px solid #d9dee7;border-radius:8px;display:flex;align-items:center;padding:0 11px}.search-wrap svg{width:16px;height:16px;fill:none;stroke:#718096;stroke-width:1.8;flex:none}.search-wrap input{width:100%;border:0;outline:0;background:transparent;padding:0 9px;color:#111827;font-size:12px}.search-wrap input::placeholder{color:#98a2b3}.icon-button{width:39px;height:39px;border:1px solid #ded9c6;background:#fff;border-radius:8px;display:grid;place-items:center;color:#111;cursor:pointer;flex:none}.icon-button:hover{background:var(--yellow-soft);border-color:#e4c000}.icon-button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.summary-kpi-grid{display:grid;grid-template-columns:repeat(var(--kpi-count,3),minmax(0,1fr));gap:12px;margin-bottom:18px}.summary-kpi{height:98px;padding:18px 18px;border-radius:13px;background:linear-gradient(135deg,#ffd633,#ffe879);display:flex;flex-direction:column;justify-content:center}.summary-kpi span{font-size:12px;color:#161616;margin-bottom:10px}.summary-kpi strong{font-size:27px;line-height:1;font-weight:800;color:#111}.summary-tabs{display:flex;align-items:stretch;background:#fff;border:1px solid #e8e4d6;border-radius:10px;padding:3px;margin-bottom:10px;gap:3px}.summary-tab{flex:1;height:38px;border:0;border-radius:8px;background:#eef1f7;color:#17203a;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s ease,color .15s ease}.summary-tab:hover{background:#f7f8fb}.summary-tab.active{background:linear-gradient(135deg,#ffd633,#ffe879);color:#111}.summary-tab:focus-visible{outline:2px solid #d8b800;outline-offset:1px}
+.breadcrumb{height:48px;background:#fff;border:1px solid #e8e4d6;border-radius:10px;display:flex;align-items:center;padding:0 14px;margin-bottom:10px;overflow:auto}.crumb{border:0;background:transparent;color:#17203a;font-size:12px;cursor:pointer;padding:5px 6px;white-space:nowrap}.crumb:hover{text-decoration:underline}.home-crumb{display:flex;align-items:center;gap:9px;font-weight:700}.home-crumb svg{width:20px;height:20px;fill:none;stroke:#111827;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.crumb-separator{display:inline-flex;align-items:center;justify-content:center;color:#9aa2b1;padding:0 5px;flex:none}.crumb-separator svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.area-summary-card{background:#fff;border-radius:10px;overflow:hidden;border:1px solid #ece9de}.area-table-wrap{overflow:auto}.area-summary-table{width:100%;border-collapse:collapse;min-width:720px}.area-summary-table th,.area-summary-table td{height:43px;padding:0 14px;border-bottom:1px solid #e7e8ec;font-size:12px}.area-summary-table th{background:#fff9db;color:#111;font-weight:800;text-align:right}.area-summary-table th.hierarchy-head{text-align:left}.area-summary-table td:not(:first-child){text-align:right}.area-summary-table tbody tr{background:#fff}.area-summary-table tbody tr:hover{background:#fffdf0}.area-summary-table tbody tr:last-child td{border-bottom:0}.area-summary-table tbody tr.summary-total-row{background:#fff9db}.area-summary-table tbody tr.summary-total-row td{font-weight:800;border-top:2px solid #e8d36c}.area-summary-table tbody tr.summary-total-row:hover{background:#fff9db}.summary-total-label{font-weight:800!important;color:#111827!important}.drill-row{cursor:pointer}.drill-row td{vertical-align:middle}.group-row-label{font-weight:800;color:#16203b;display:flex;align-items:center}.store-row-label{font-weight:600;color:#26324c;display:flex;align-items:center}.chevron{width:22px;display:inline-grid;place-items:center;margin-right:3px}.chevron svg{width:15px;height:15px;fill:none;stroke:#7b879c;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.sub-label{display:block;font-size:10px;color:#98a2b3;margin-left:8px}.empty-cell{text-align:center!important;color:#98a2b3!important;height:80px!important}.loading{text-align:center;padding:50px;color:#667085;font-size:13px}
+.app-footer{width:min(1190px,calc(100% - 42px));margin:0 auto;border-top:1px solid #e5e7eb;padding:15px 0 22px;display:flex;justify-content:space-between;color:#7a8497;font-size:10px}.toast{position:fixed;right:20px;bottom:20px;background:#171717;color:#fff;padding:10px 13px;border-radius:7px;opacity:0;pointer-events:none;transform:translateY(8px);transition:.2s;font-size:12px}.toast.show{opacity:1;transform:none}.error-toast{background:#b91c1c}
+.login-screen{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 0%,#fff8cc 0%,#fffdf5 42%,#f7f7f2 100%);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.login-card{width:min(420px,100%);padding:30px;background:#fff;border:1px solid #e8e3c8;border-top:5px solid var(--yellow);border-radius:18px;box-shadow:0 20px 60px rgba(23,23,23,.12)}.login-brand{display:flex;align-items:center;gap:13px;margin-bottom:26px}.login-brand-mark{width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:var(--yellow);color:#171717;font-size:24px;font-weight:900}.login-brand-name{margin:0;font-size:23px;font-weight:800;color:#171717;line-height:1.15}.login-brand-subtitle{margin:4px 0 0;color:#77705a;font-size:12px}.login-heading{margin:0 0 19px}.login-heading h1{margin:0;font-size:18px;color:#242000}.login-heading p{margin:6px 0 0;color:#6d6a55;font-size:12px}.login-form{display:grid;gap:15px}.login-field{display:grid;gap:7px}.login-field label{color:#2b2700;font-size:12px;font-weight:800;margin:0}.login-field input{width:100%;height:44px;border:1px solid #d9d4ba;border-radius:9px;background:#fffef8;color:#171717;padding:0 12px;outline:none}.login-field input:focus{border-color:#c7a900;box-shadow:0 0 0 3px rgba(255,212,0,.18)}.password-input-wrap{position:relative}.password-input-wrap input{padding-right:46px}.password-toggle{position:absolute;right:5px;top:5px;width:34px;height:34px;border:0;background:transparent;display:grid;place-items:center;color:#514900;cursor:pointer}.password-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.login-message{min-height:18px;font-size:12px;color:#5b4f00}.login-button{height:44px;margin-top:3px;border:1px solid #c7a900;border-radius:9px;background:var(--yellow);color:#171717;font-weight:900;cursor:pointer}.login-button:hover{background:#f5c400}.login-button:disabled{opacity:.55;cursor:wait}.login-note{margin:20px 0 0;text-align:center;color:#9a8d44;font-size:10px;background:#f5f5f5;border:1px solid #ddd;padding:6px;border-radius:2px}.login-footer{margin-top:21px;text-align:center;color:#667085;font-size:11px}.login-footer strong{color:#d09f00}.login-divider{height:1px;background:#e8d36c;margin-bottom:15px}
+@media(max-width:900px){
+  .summary-kpi-grid{grid-template-columns:repeat(var(--kpi-count,3),minmax(0,1fr))}
+  .page{width:min(100% - 28px,1190px)}
+  .app-footer{width:min(100% - 28px,1190px)}
+}
+@media(max-width:620px){
+  .topbar{height:auto;min-height:58px;padding:9px 10px;gap:8px}
+  .brand-line{min-width:0}
+  .brand-line h1{font-size:16px;line-height:1.08;white-space:normal}
+  .brand-line p{font-size:9px;margin-top:2px}
+  .identity-context{display:none}
+  .logout-button{width:32px;height:32px}
+  .page{width:100%;padding:9px 8px 20px}
+  .summary-tools{gap:6px;margin-bottom:9px}
+  .search-wrap{height:35px;padding:0 7px;min-width:0}
+  .search-wrap input{font-size:10.5px;padding:0 5px;min-width:0;text-overflow:ellipsis}
+  .search-wrap input::placeholder{font-size:9.5px}
+  .icon-button{width:35px;height:35px}
+
+  /* Dynamic KPI strip: the number of visible cards determines the column count. */
+  .summary-kpi-grid{grid-template-columns:repeat(var(--kpi-count,3),minmax(0,1fr));gap:5px;margin-bottom:9px}
+  .summary-kpi{height:62px;min-width:0;padding:7px 8px;border-radius:9px;justify-content:center}
+  .summary-kpi span{font-size:8.5px;line-height:1.1;margin-bottom:4px;white-space:normal}
+  .summary-kpi strong{font-size:20px;line-height:1}
+
+  .summary-tabs{margin-bottom:7px;padding:2px;gap:2px;border-radius:8px}
+  .summary-tab{height:34px;font-size:10.5px;border-radius:6px}
+  .breadcrumb{height:42px;padding:0 7px;margin-bottom:7px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .breadcrumb::-webkit-scrollbar{display:none}
+  .crumb{font-size:10.5px;padding:4px 4px}
+  .home-crumb{gap:5px}
+  .home-crumb svg{width:16px;height:16px}
+  .crumb-separator{font-size:15px;padding:0 1px}
+
+  .area-summary-card{border-radius:8px;width:100%;}
+  .area-table-wrap{width:100%;overflow-x:hidden}
+  .area-summary-table{width:100%;min-width:0;table-layout:fixed}
+  .area-summary-table th,.area-summary-table td{height:auto;min-height:40px;padding:7px 6px;font-size:10px;line-height:1.18;overflow-wrap:normal;word-break:normal}
+  .area-summary-table th:first-child,.area-summary-table td:first-child{width:46%;text-align:left}
+  .area-summary-table th:nth-child(2),.area-summary-table td:nth-child(2){width:27%;}
+  .area-summary-table th:nth-child(3),.area-summary-table td:nth-child(3){width:27%;}
+  .area-summary-table th{white-space:normal;vertical-align:middle}
+  .area-summary-table td:not(:first-child){white-space:nowrap}
+  .group-row-label,.store-row-label{white-space:normal;min-width:0;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:normal}
+  .group-row-label .chevron,.store-row-label .chevron{flex:none}
+  .sub-label{font-size:8.5px;margin-left:4px}
+  .empty-cell{height:64px!important}
+  .loading{padding:28px 8px;font-size:11px}
+  .app-footer{width:100%;padding:10px 0 16px;flex-direction:column;gap:4px;font-size:8.5px}
+}
+@media(max-width:380px){
+  .page{padding-left:6px;padding-right:6px}
+  .summary-kpi-grid{gap:4px}
+  .summary-kpi{height:58px;padding:6px 5px}
+  .summary-kpi span{font-size:7.5px;margin-bottom:3px}
+  .summary-kpi strong{font-size:18px}
+  .summary-tab{font-size:10px;height:33px}
+  .area-summary-table th,.area-summary-table td{padding-left:5px;padding-right:5px;font-size:9.5px}
+  .area-summary-table th:first-child,.area-summary-table td:first-child{width:46%}
+  .area-summary-table th:nth-child(2),.area-summary-table td:nth-child(2){width:27%}
+  .area-summary-table th:nth-child(3),.area-summary-table td:nth-child(3){width:27%}
+}
+
+/* V24.15 â€” Mobile summary table alignment based on the proven EKSBASE responsive-table approach.
+   This project has three summary columns, so the hierarchy column is 40% and the two
+   metric columns share the remaining 60%.  Keep the table inside the viewport and
+   prevent an oversized hierarchy column from creating a visually blank area. */
+@media (max-width:620px){
+  .area-summary-card{width:100%!important;max-width:100%!important;overflow:hidden!important}
+  .area-table-wrap{width:100%!important;max-width:100%!important;overflow-x:hidden!important;overflow-y:auto!important}
+  .area-summary-table{width:100%!important;min-width:0!important;max-width:100%!important;table-layout:fixed!important;border-collapse:collapse!important}
+  .area-summary-table th,.area-summary-table td{box-sizing:border-box!important;vertical-align:middle!important}
+  .area-summary-table th:first-child,.area-summary-table td:first-child{width:40%!important;max-width:40%!important;text-align:left!important}
+  .area-summary-table th:nth-child(2),.area-summary-table td:nth-child(2){width:30%!important;max-width:30%!important}
+  .area-summary-table th:nth-child(3),.area-summary-table td:nth-child(3){width:30%!important;max-width:30%!important}
+  .area-summary-table th{white-space:normal!important;overflow-wrap:normal!important;word-break:normal!important}
+  .area-summary-table td:not(:first-child){white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .group-row-label,.store-row-label{width:100%!important;min-width:0!important;max-width:100%!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important;word-break:normal!important;align-items:flex-start!important}
+  .group-row-label .chevron,.store-row-label .chevron{flex:0 0 auto!important}
+}
+
+@media (max-width:380px){
+  .area-summary-table th:first-child,.area-summary-table td:first-child{width:40%!important;max-width:40%!important}
+  .area-summary-table th:nth-child(2),.area-summary-table td:nth-child(2){width:30%!important;max-width:30%!important}
+  .area-summary-table th:nth-child(3),.area-summary-table td:nth-child(3){width:30%!important;max-width:30%!important}
+}
+
+/* V24.16 â€” Mobile hierarchy labels follow the EKSBASE mobile table behavior. */
+@media (max-width:620px){
+  .area-summary-table td:first-child .group-row-label span:last-child,
+  .area-summary-table td:first-child .store-row-label span:last-child{
+    min-width:0!important;
+    max-width:none!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+  }
+}
+
+/* V24.17 â€” Mobile hierarchy text correction.
+   Follow the EKSBASE responsive-table principle without forcing hierarchy labels
+   to break at every character. Keep the hierarchy column usable while allowing
+   genuinely long labels to wrap only when needed. */
+@media (max-width:620px){
+  .area-summary-table th:first-child,
+  .area-summary-table td:first-child{
+    width:60%!important;
+    max-width:60%!important;
+    text-align:left!important;
+  }
+  .area-summary-table th:nth-child(2),
+  .area-summary-table td:nth-child(2){
+    width:20%!important;
+    max-width:20%!important;
+  }
+  .area-summary-table th:nth-child(3),
+  .area-summary-table td:nth-child(3){
+    width:20%!important;
+    max-width:20%!important;
+  }
+  .group-row-label,
+  .store-row-label{
+    display:flex!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    align-items:center!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    overflow-wrap:break-word!important;
+    word-break:normal!important;
+  }
+  .group-row-label .chevron,
+  .store-row-label .chevron{
+    flex:0 0 22px!important;
+    width:22px!important;
+  }
+  .area-summary-table td:first-child .group-row-label span:last-child,
+  .area-summary-table td:first-child .store-row-label span:last-child{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    max-width:100%!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    overflow-wrap:break-word!important;
+    word-break:normal!important;
+  }
+}
+@media (max-width:380px){
+  .area-summary-table th:first-child,
+  .area-summary-table td:first-child{width:60%!important;max-width:60%!important}
+  .area-summary-table th:nth-child(2),
+  .area-summary-table td:nth-child(2){width:20%!important;max-width:20%!important}
+  .area-summary-table th:nth-child(3),
+  .area-summary-table td:nth-child(3){width:20%!important;max-width:20%!important}
+}
+
+/* V24.18 â€” Global Customer/Store search results. Search is independent of the
+   current summary level and navigates directly to the matching hierarchy path. */
+.search-container{position:relative;flex:1;min-width:0}.search-container .search-wrap{width:100%}.summary-search-results{position:absolute;z-index:50;top:calc(100% + 5px);left:0;right:0;background:#fff;border:1px solid #d9dee7;border-radius:8px;box-shadow:0 8px 24px rgba(16,24,40,.12);overflow:hidden;max-height:320px;overflow-y:auto}.summary-search-result{width:100%;border:0;background:#fff;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;cursor:pointer}.summary-search-result:hover{background:#fff9db}.summary-search-result-main{min-width:0;display:flex;flex-direction:column;gap:2px}.summary-search-result-main strong{font-size:12px;color:#16203b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.summary-search-result-main small{font-size:10px;color:#667085;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.summary-search-result-type{font-size:9px;font-weight:800;color:#667085;flex:none}.summary-search-empty,.summary-search-loading{padding:12px;font-size:11px;color:#667085;background:#fff}
+@media(max-width:620px){.summary-search-results{max-height:260px}.summary-search-result{padding:8px 9px}.summary-search-result-main strong{font-size:10.5px}.summary-search-result-main small{font-size:8.5px}.summary-search-result-type{font-size:8px}.search-container{min-width:0}}
+
+
+/* V24.24 â€” Preserve real table-cell layout for hierarchy cells.
+   The flex layout belongs on the inner label wrapper, not on <td>, so the
+   browser can correctly distribute the three summary columns. */
+.area-summary-table td.hierarchy-cell{
+  text-align:left!important;
+  vertical-align:middle!important;
+}
+.area-summary-table td.hierarchy-cell > .group-row-label,
+.area-summary-table td.hierarchy-cell > .store-row-label{
+  width:100%;
+  min-width:0;
+}
+
+/* V24.23 â€” Mobile hierarchy column utilization. Use the available first-column space
+   instead of leaving unused width beside hierarchy labels. Metrics remain compact. */
+@media (max-width:620px){
+  .area-summary-table th:first-child,
+  .area-summary-table td:first-child{
+    width:60%!important;
+    max-width:60%!important;
+    text-align:left!important;
+  }
+  .area-summary-table th:nth-child(2),
+  .area-summary-table td:nth-child(2){
+    width:20%!important;
+    max-width:20%!important;
+  }
+  .area-summary-table th:nth-child(3),
+  .area-summary-table td:nth-child(3){
+    width:20%!important;
+    max-width:20%!important;
+  }
+  .group-row-label, .store-row-label{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    display:flex!important;
+    align-items:center!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    overflow-wrap:break-word!important;
+    word-break:normal!important;
+    hyphens:none!important;
+  }
+  .group-row-label .chevron, .store-row-label .chevron{
+    flex:0 0 22px!important;
+    width:22px!important;
+  }
+  .group-row-label span:last-child, .store-row-label span:last-child{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    overflow-wrap:break-word!important;
+    word-break:normal!important;
+  }
+}
+@media (max-width:380px){
+  .area-summary-table th:first-child,.area-summary-table td:first-child{width:60%!important;max-width:60%!important}
+  .area-summary-table th:nth-child(2),.area-summary-table td:nth-child(2){width:20%!important;max-width:20%!important}
+  .area-summary-table th:nth-child(3),.area-summary-table td:nth-child(3){width:20%!important;max-width:20%!important}
+}
+
+
+/* V24.25 â€” Deterministic summary-table columns.
+   Use a real <colgroup> so header cells, body cells, and total cells share
+   exactly the same three column boundaries at every responsive width. */
+.area-summary-table{width:100%!important;min-width:0!important;table-layout:fixed!important}
+.area-summary-table col.hierarchy-col{width:55%!important}
+.area-summary-table col.metric-col{width:22.5%!important}
+.area-summary-table th:first-child,.area-summary-table td:first-child{width:auto!important;max-width:none!important;text-align:left!important}
+.area-summary-table th:nth-child(2),.area-summary-table td:nth-child(2),
+.area-summary-table th:nth-child(3),.area-summary-table td:nth-child(3){width:auto!important;max-width:none!important;text-align:right!important}
+.area-summary-table th,.area-summary-table td{box-sizing:border-box!important}
+
+@media (max-width:620px){
+  .area-summary-table col.hierarchy-col{width:60%!important}
+  .area-summary-table col.metric-col{width:20%!important}
+  .area-summary-table th,.area-summary-table td{padding-left:6px!important;padding-right:6px!important}
+  .area-summary-table th:first-child,.area-summary-table td:first-child{width:auto!important;max-width:none!important}
+  .area-summary-table th:nth-child(2),.area-summary-table td:nth-child(2),
+  .area-summary-table th:nth-child(3),.area-summary-table td:nth-child(3){width:auto!important;max-width:none!important}
+}
+
+@media (max-width:380px){
+  .area-summary-table col.hierarchy-col{width:60%!important}
+  .area-summary-table col.metric-col{width:20%!important}
+}
+
+
+/* v24.30: Store drill-down must expose the active PS/NHT/FL bindings. */
+.store-binding-card{margin-top:12px;background:#fff;border:1px solid #ece9de;border-radius:10px;overflow:hidden}.store-binding-header{min-height:48px;padding:10px 14px;background:#fff9db;border-bottom:1px solid #e7e8ec;display:flex;align-items:center;justify-content:space-between;gap:12px}.store-binding-header div{display:flex;flex-direction:column;gap:2px}.store-binding-header strong{font-size:12px;color:#111}.store-binding-header span{font-size:11px;color:#667085}.store-binding-header b{font-size:13px;color:#111}.store-binding-table-wrap{overflow:auto}.store-binding-table{width:100%;border-collapse:collapse;table-layout:fixed}.store-binding-table th,.store-binding-table td{height:40px;padding:0 14px;border-bottom:1px solid #e7e8ec;font-size:12px;text-align:left}.store-binding-table th{background:#fff;color:#111;font-weight:800}.store-binding-table tbody tr:last-child td{border-bottom:0}.store-binding-table tbody tr:hover{background:#fffdf0}.binding-code-col{width:25%}.binding-name-col{width:45%}.binding-role-col{width:30%}.store-binding-loading{padding:28px}.store-binding-message{padding:28px;text-align:center!important}
+@media (max-width:700px){.store-binding-table th,.store-binding-table td{height:auto;min-height:38px;padding:7px 6px;font-size:10px;line-height:1.18}.binding-code-col{width:28%}.binding-name-col{width:42%}.binding-role-col{width:30%}.store-binding-header{padding:8px 6px}.store-binding-header strong{font-size:10px}.store-binding-header span{font-size:9px}.store-binding-header b{font-size:11px}}
+
+
+/* V24.44 â€” EKSBASE-style first-time password setup */
+.password-change-intro {
+  margin: 18px 0 20px;
+  text-align: center;
+}
+.password-change-intro h2 {
+  margin: 0 0 7px;
+  color: #242000;
+  font-size: 18px;
+}
+.password-change-intro p {
+  margin: 0 auto;
+  max-width: 390px;
+  color: #6d6a55;
+  font-size: 12px;
+  line-height: 1.5;
+}
+#passwordChangeButton:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+/* V24.46 â€” Administrator employee password reset */
+.admin-reset-button span{font-size:16px;font-weight:800;line-height:1}
+.admin-reset-button:hover{background:var(--yellow-soft);border-color:#e4c000}
+.admin-modal{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:18px}
+.admin-modal.hidden{display:none!important}
+.admin-modal-backdrop{position:absolute;inset:0;background:rgba(23,23,23,.28);backdrop-filter:blur(2px)}
+.admin-modal-card{position:relative;width:min(430px,100%);padding:18px;background:#fff;border:1px solid #e8e3c8;border-top:4px solid var(--yellow);border-radius:16px;box-shadow:0 24px 70px rgba(23,23,23,.20)}
+.admin-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.admin-modal-kicker{display:block;margin-bottom:3px;color:#8b7e2e;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.admin-modal-header h3{margin:0;color:#242000;font-size:17px}
+.admin-modal-close{width:32px;height:32px;border:1px solid #e8e3c8;border-radius:9px;background:#fff;color:#5b4f00;font-size:20px;line-height:1;cursor:pointer}
+.admin-modal-fields{display:block}
+.admin-modal-fields label{display:block;margin-bottom:6px;color:#5b4f00;font-size:11px;font-weight:800}
+.admin-modal-fields input{width:100%;height:40px;box-sizing:border-box;border:1px solid #d9d2a8;border-radius:9px;padding:0 9px;background:#fff;color:#242000;outline:none}
+.admin-modal-fields input:focus{border-color:#c7a900;box-shadow:0 0 0 3px rgba(255,212,0,.18)}
+.admin-modal-fields p{margin:12px 0 0;font-size:12px;line-height:1.5;color:#667085}
+.admin-modal-message{min-height:18px;margin-top:10px;color:#b91c1c;font-size:11px;line-height:1.4}
+.admin-modal-message.success{color:#16724a}.admin-modal-message.error{color:#b91c1c}
+.admin-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.admin-secondary-button,.admin-primary-button{height:38px;padding:0 14px;border-radius:9px;font-weight:700;cursor:pointer}
+.admin-secondary-button{border:1px solid #e2ddbf;background:#fff;color:#4b4300}
+.admin-primary-button{border:1px solid #c7a900;background:var(--yellow);color:#171717;font-weight:900}
+.admin-primary-button:hover{background:#f5c400}.admin-primary-button:disabled{opacity:.55;cursor:wait}
+body.admin-modal-open{overflow:hidden}
+@media(max-width:620px){.admin-modal{padding:10px}.admin-modal-card{width:100%;padding:15px}.admin-modal-actions{flex-direction:column-reverse}.admin-modal-actions button{width:100%}}
+
+
+/* V24.50 â€” Restore the EKSBASE date-modal base styles used by the ADMIN password reset dialog. */
+.date-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+.date-modal.hidden { display: none !important; }
+.date-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(23,23,23,.28);
+  backdrop-filter: blur(2px);
+}
+.date-modal-card {
+  position: relative;
+  width: min(430px,100%);
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e8e3c8;
+  border-top: 4px solid var(--yellow);
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(23,23,23,.20);
+}
+.date-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.date-modal-kicker {
+  display: block;
+  margin-bottom: 3px;
+  color: #8b7e2e;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.date-modal-header h3 {
+  margin: 0;
+  color: #242000;
+  font-size: 17px;
+}
+.date-modal-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e8e3c8;
+  border-radius: 9px;
+  background: #fff;
+  color: #5b4f00;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.date-modal-fields {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 9px;
+}
+.date-modal-fields label {
+  display: grid;
+  gap: 5px;
+  color: #5b4f00;
+  font-size: 11px;
+  font-weight: 800;
+}
+.date-modal-fields input {
+  width: 100%;
+  height: 40px;
+  box-sizing: border-box;
+  border: 1px solid #d9d2a8;
+  border-radius: 9px;
+  padding: 0 9px;
+  background: #fff;
+  color: #242000;
+  outline: none;
+}
+.date-modal-fields input:focus {
+  border-color: #c7a900;
+  box-shadow: 0 0 0 3px rgba(255,212,0,.18);
+}
+.date-modal-message {
+  min-height: 18px;
+  margin-top: 9px;
+  color: #b91c1c;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.date-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.secondary-button {
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid #e2ddbf;
+  border-radius: 9px;
+  background: #fff;
+  color: #4b4300;
+  font-weight: 700;
+  cursor: pointer;
+}
+.date-modal-actions .primary-button {
+  height: 38px;
+  padding: 0 14px;
+}
+body.modal-open { overflow: hidden; }
+
+/* V24.49 â€” EKSBASE-style ADMIN password reset modal. */
+.admin-reset-date-modal-card{width:min(430px,100%);padding:18px;background:#fff;border:1px solid #e8e3c8;border-top:4px solid var(--yellow);border-radius:16px;box-shadow:0 24px 70px rgba(23,23,23,.20)}
+.admin-reset-fields{display:block!important}
+.admin-reset-fields label{display:grid!important;gap:5px!important;color:#5b4f00;font-size:11px;font-weight:800}
+.admin-reset-fields input{margin-top:0;width:100%;height:40px;box-sizing:border-box;border:1px solid #d9d2a8;border-radius:9px;padding:0 9px;background:#fff;color:#242000;outline:none}
+.admin-reset-fields input:focus{border-color:#c7a900;box-shadow:0 0 0 3px rgba(255,212,0,.18)}
+.admin-reset-fields p{margin:12px 0 0!important;font-size:13px!important;line-height:1.5!important;color:#242000!important}
+.admin-reset-fields p strong{font-weight:800}
+.admin-reset-date-modal-card .date-modal-message{min-height:18px;margin-top:9px;color:#b91c1c;font-size:11px;line-height:1.4}
+.admin-reset-date-modal-card .date-modal-message.success{color:#16724a}.admin-reset-date-modal-card .date-modal-message.error{color:#b91c1c}
+.admin-reset-date-modal-card .secondary-button{height:38px;padding:0 13px;border:1px solid #e2ddbf;border-radius:9px;background:#fff;color:#4b4300;font-weight:700;cursor:pointer}
+.admin-reset-date-modal-card .primary-button{height:38px;padding:0 14px;border:1px solid #c7a900;border-radius:9px;background:var(--yellow);color:#171717;font-weight:900;cursor:pointer}
+.admin-reset-date-modal-card .primary-button:hover{background:#f5c400}.admin-reset-date-modal-card .primary-button:disabled{opacity:.55;cursor:wait}
+
+@media (max-width: 620px) {
+  .date-modal { padding: 12px; }
+  .date-modal-card { padding: 15px; border-radius: 14px; }
+  .date-modal-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .date-modal-actions button { width: 100%; }
+}
+
+/* DingTalk SSO */
+.dingtalk-login-button { margin-top: 10px; }
+.login-message:empty { min-height: 0; }
+
+.icon-button.is-loading { opacity: .6; pointer-events: none; }
+.icon-button.is-loading svg { animation: csd-spin 1s linear infinite; }
+@keyframes csd-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

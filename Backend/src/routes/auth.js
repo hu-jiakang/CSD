@@ -1,0 +1,2 @@
+import express from "express";
+export function createAuthRouter({controller,authMiddleware}){const r=express.Router();r.get("/dingtalk/config",controller.dingtalkConfig);r.post("/login",controller.login);r.post("/dingtalk",controller.loginWithDingTalk);r.post("/change-password",controller.changePassword);r.get("/me",authMiddleware,controller.me);r.post("/logout",authMiddleware,controller.logout);r.post("/admin/reset-password",authMiddleware,controller.resetEmployeePassword);return r;}

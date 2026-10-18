@@ -1,0 +1,29 @@
+# Production configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+.npmrc
+# Dependencies and persistent/runtime data
+node_modules/
+data/
+logs/
+log/
+tmp/
+exports/
+*.log
+*.db
+*.db-*
+*.sqlite*
+# Historical backups and editor metadata
+*.bak*
+*.backup
+src.bak*/
+.workbuddy-ai/
+.well-known/
+acme/
+Thumbs.db
+.DS_Store
