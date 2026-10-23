@@ -1,0 +1,21 @@
+name: Mirror to Gitee
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "**"
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Mirror repository to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          git clone --mirror "https://github.com/${{ github.repository }}.git" repo.git
+          cd repo.git
+          git push --mirror "https://oauth2:${GITEE_TOKEN}@gitee.com/szrunto/csd.git"
