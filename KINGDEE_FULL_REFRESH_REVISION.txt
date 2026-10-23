@@ -1,0 +1,14 @@
+Kingdee Full Refresh Revision — Organization Scope Applied Consistently
+
+Changes in this revision:
+- Customer query uses the configured organization filter.
+- Store query uses the configured organization filter plus the existing STR.% warehouse/store restriction.
+- Store/promoter Binding query uses F_RTA_UseOrgId.FNumber for the configured organization.
+- Department master query uses the configured organization filter.
+- Employee enrichment queries combine the configured organization filter with requested employee numbers.
+- Employee lookup used by authentication also applies the configured organization filter.
+- Full master-data refresh replaces customers, stores, bindings, and departments in one SQLite transaction after source data is fetched.
+- Existing snapshot is preserved if source data is incomplete or a transaction fails.
+- Authentication database and .env are not changed.
+
+No live Kingdee sync was executed while preparing this package. Before running, verify the configured organization and confirm that the Kingdee form metadata supports the configured organization field on BD_Customer, BD_STOCK, BD_Department, and BD_Empinfo; Binding uses F_RTA_UseOrgId.FNumber.

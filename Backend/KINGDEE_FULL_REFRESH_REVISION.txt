@@ -1,0 +1,11 @@
+Kingdee Full Refresh Revision
+
+Changes in this revision:
+- Fetch customer, store, binding, and department data before writing SQLite.
+- Scope Store/Sales Rep bindings to the configured organization using F_RTA_UseOrgId.FNumber.
+- Replace customer, store, binding, and department snapshots in one SQLite transaction.
+- Preserve existing snapshot if a required source dataset returns no usable records or a write fails.
+- Keep the existing role filtering and department-row handling.
+- Authentication database and credentials are not included or modified.
+
+To apply: back up your current project and databases, extract this project revision, copy your existing local Backend/.env into the extracted Backend folder, then run the existing backend. The live refresh must be initiated from the authenticated dashboard/API or by the existing scheduler. This archive does not contain live credentials or database snapshots.

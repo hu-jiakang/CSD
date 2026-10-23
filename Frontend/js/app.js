@@ -1,4 +1,4 @@
-const FRONTEND_VERSION = "24.59";
+const FRONTEND_VERSION = "24.55";
 const state = {
   token: sessionStorage.getItem("csd_token") || "",
   dingtalk: {
@@ -46,10 +46,6 @@ const homeIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7
 const chevron = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`;
 
 const $ = (sel) => document.querySelector(sel);
-const withTimeout = (promise, ms, label) => Promise.race([
-  promise,
-  new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms.`)), ms)),
-]);
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]));
 const clean = (value) => String(value ?? "").trim();
 const upper = (value) => clean(value).toUpperCase();
@@ -101,11 +97,7 @@ function render() {
   if (state.token) {
     document.body.innerHTML = dashboardHtml();
   } else if (isDingTalkEnvironment() && !state.dingtalk.attempted) {
-    document.body.innerHTML = `<main class="login-screen"><section class="login-card"><div class="login-brand">
-      <div class="login-brand-mark">CS</div>
-      <div><div class="login-brand-name">Customer and Store Dashboard</div>
-      <div class="login-brand-subtitle">Signing in with DingTalk, please wait...</div></div>
-      </div></section></main>`;
+    document.body.innerHTML = "";
   } else {
     document.body.innerHTML = loginHtml();
   }
@@ -138,8 +130,6 @@ function loginHtml() {
 
         <div id="loginError" class="login-message" role="alert"></div>
         <button class="login-button" type="submit">Sign In</button>
-        <button id="dingtalkLoginBtn" class="dingtalk-login-button hidden" type="button">Sign in with DingTalk</button>
-        <div id="dingtalkLoginMessage" class="login-message"></div>
         <div class="login-note">Forgot your password? Please contact BOE</div>
       </form>
 
@@ -225,7 +215,7 @@ function adminResetModalHtml() {
           <span class="date-modal-kicker">Administrator</span>
           <h3 id="adminResetModalTitle">Reset Employee Password</h3>
         </div>
-        <button type="button" class="date-modal-close" data-close-admin-reset aria-label="Close">ï¿½</button>
+        <button type="button" class="date-modal-close" data-close-admin-reset aria-label="Close">×</button>
       </div>
       <div class="date-modal-fields admin-reset-fields">
         <label for="adminResetEmployeeNo">Employee No.<input id="adminResetEmployeeNo" type="text" inputmode="numeric" autocomplete="off" placeholder="Enter Employee No." /></label>
@@ -839,14 +829,8 @@ async function api(path, options = {}) {
   try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text }; }
   // A 401 from the login endpoint is a normal authentication failure and
   // must be shown on the login screen. Only treat 401 as session expiry
-  // when an authenticated request was already in progress. The password
-  // change endpoint is also exempt: its failure must surface inside the
-  // password change screen, not bounce the user back to the login page.
-  if (
-    res.status === 401 &&
-    path !== "/api/auth/login" &&
-    path !== "/api/auth/change-password"
-  ) {
+  // when an authenticated request was already in progress.
+  if (res.status === 401 && path !== "/api/auth/login") {
     sessionStorage.removeItem("csd_token");
     state.token = "";
     render();
@@ -892,23 +876,19 @@ async function requestDingTalkAuthCode(config) {
     throw new Error("DingTalk SSO configuration is incomplete.");
   }
 
-  await withTimeout(
-    new Promise((resolve, reject) => {
-      if (typeof window.dd.ready !== "function") {
-        resolve();
-        return;
-      }
+  await new Promise((resolve, reject) => {
+    if (typeof window.dd.ready !== "function") {
+      resolve();
+      return;
+    }
 
-      window.dd.ready(resolve);
-      if (typeof window.dd.error === "function") {
-        window.dd.error((error) => {
-          reject(new Error(error?.message || "DingTalk JSAPI initialization failed."));
-        });
-      }
-    }),
-    10000,
-    "DingTalk JSAPI initialization"
-  );
+    window.dd.ready(resolve);
+    if (typeof window.dd.error === "function") {
+      window.dd.error((error) => {
+        reject(new Error(error?.message || "DingTalk JSAPI initialization failed."));
+      });
+    }
+  });
 
   const authFn =
     typeof window.dd.requestAuthCode === "function"
@@ -921,29 +901,25 @@ async function requestDingTalkAuthCode(config) {
     throw new Error("DingTalk authorization API is not available.");
   }
 
-  return withTimeout(
-    new Promise((resolve, reject) => {
-      authFn({
-        corpId,
-        success: (result) => {
-          const code = clean(result?.code || result?.authCode);
-          if (!code) {
-            reject(new Error("DingTalk did not return an authorization code."));
-            return;
-          }
-          resolve(code);
-        },
-        fail: (error) => {
-          const detail = typeof error === "string"
-            ? error
-            : error?.message || error?.errorMessage || "";
-          reject(new Error(detail || "DingTalk authorization failed."));
-        },
-      });
-    }),
-    15000,
-    "DingTalk authorization"
-  );
+  return new Promise((resolve, reject) => {
+    authFn({
+      corpId,
+      success: (result) => {
+        const code = clean(result?.code || result?.authCode);
+        if (!code) {
+          reject(new Error("DingTalk did not return an authorization code."));
+          return;
+        }
+        resolve(code);
+      },
+      fail: (error) => {
+        const detail = typeof error === "string"
+          ? error
+          : error?.message || error?.errorMessage || "";
+        reject(new Error(detail || "DingTalk authorization failed."));
+      },
+    });
+  });
 }
 
 async function loginWithDingTalk() {
@@ -987,7 +963,7 @@ async function autoLoginWithDingTalk() {
   state.dingtalk.attempted = true;
 
   try {
-    for (let attempt = 0; attempt < 50; attempt += 1) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
       const hasAuthApi =
         window.dd &&
         (
@@ -996,7 +972,7 @@ async function autoLoginWithDingTalk() {
         );
 
       if (hasAuthApi) break;
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     const hasAuthApi =
@@ -1013,16 +989,6 @@ async function autoLoginWithDingTalk() {
     await loginWithDingTalk();
   } catch (err) {
     state.dingtalk.error = err.message || "DingTalk automatic sign-in failed.";
-    state.dingtalk.loading = false;
-    render();
-  }
-
-  // loginWithDingTalk swallows its own errors so they can be shown on the
-  // login screen message area. When auto-login fails while the "please
-  // wait" placeholder is on screen, that message area does not exist yet,
-  // so fall back to the login page here â€” otherwise the placeholder would
-  // stay on screen forever.
-  if (!state.token) {
     state.dingtalk.loading = false;
     render();
   }

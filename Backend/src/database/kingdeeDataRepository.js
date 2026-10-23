@@ -42,6 +42,45 @@ function parse(row) {
   try { return JSON.parse(row.payload); } catch { return null; }
 }
 
+export function replaceMasterDataSnapshot({ customers = [], stores = [], departments = [], bindings = [] }) {
+  const stamp = now();
+  const validCustomers = customers.filter((row) => String(row?.FNumber ?? "").trim());
+  const validStores = stores.filter((row) => String(row?.FNumber ?? "").trim());
+  const validDepartments = departments.filter((row) => String(row?.FNumber ?? "").trim() || String(row?.FName ?? "").trim());
+  const validBindings = bindings.filter((row) => String(row?.storeCode ?? "").trim() && String(row?.promoterCode ?? "").trim());
+
+  // Defensive preflight: an empty source result must never erase a populated snapshot.
+  if (!validCustomers.length || !validStores.length || !validDepartments.length || !validBindings.length) {
+    throw new Error("Kingdee master-data snapshot is incomplete; existing local snapshot was preserved.");
+  }
+
+  let saved = 0;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec("DELETE FROM kingdee_customers; DELETE FROM kingdee_stores; DELETE FROM kingdee_bindings; DELETE FROM kingdee_departments;");
+    for (const row of validCustomers) upsertCustomer.run(String(row.FNumber).trim(), JSON.stringify(row), stamp);
+    for (const row of validStores) upsertStore.run(String(row.FNumber).trim(), JSON.stringify(row), stamp);
+    for (const row of validDepartments) {
+      const code = String(row?.FNumber ?? "").trim();
+      const name = String(row?.FName ?? "").trim();
+      const key = code || name;
+      upsertDepartmentStatement.run(key, code, name, JSON.stringify(row), stamp);
+    }
+    for (const row of validBindings) {
+      const storeCode = String(row.storeCode).trim();
+      const promoterCode = String(row.promoterCode).trim();
+      const key = String(row.bindingKey || `${storeCode}\u0000${promoterCode}\u0000${String(row.mainStore ?? "").trim()}`);
+      upsertBinding.run(key, storeCode, promoterCode, String(row.promoterName ?? "").trim(), String(row.roleCode ?? "").trim(), String(row.roleName ?? "").trim(), String(row.mainStore ?? "").trim(), row.inactivePsNhtFl ? 1 : 0, JSON.stringify(row), stamp);
+    }
+    saved = validCustomers.length + validStores.length + validDepartments.length + validBindings.length;
+    db.exec("COMMIT");
+    return saved;
+  } catch (error) {
+    try { db.exec("ROLLBACK"); } catch {}
+    throw error;
+  }
+}
+
 export function replaceCustomers(rows) {
   const stamp = now();
   db.exec("BEGIN"); try { for (const row of rows) { const code = String(row?.FNumber ?? "").trim(); if (code) upsertCustomer.run(code, JSON.stringify(row), stamp); } db.exec("COMMIT"); } catch (error) { if (db.isTransaction) db.exec("ROLLBACK"); throw error; }

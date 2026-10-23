@@ -50,7 +50,7 @@ const bindingController = createBindingController({ bindingService });
 const dashboardSummaryService = createDashboardSummaryService({ customerStoreService, bindingService });
 const dashboardSummaryController = createDashboardSummaryController({ dashboardSummaryService });
 
-const employeeService = createEmployeeService({ kingdeeClient });
+const employeeService = createEmployeeService({ kingdeeClient, scope });
 const dingtalkService = createDingTalkService({ config });
 const accessService = createAccessService({ storeService, customerService, departmentService });
 const authService = createAuthService({ employeeService, accessService, dashboardSummaryService, dingtalkService });

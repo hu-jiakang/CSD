@@ -1,0 +1,31 @@
+Customer & Store Dashboard — Minimal-Change Production Source Package
+
+Purpose
+- Restore and retain the original built-in node:sqlite implementation.
+- Keep the verified Store Type fix based on F_PARV_StoreType.FName.
+- Preserve the existing Kingdee scheduler configuration (30 minutes in .env.example).
+- Provide a repeatable dependency install and syntax-check command.
+
+Changes in this package
+- Retained node:sqlite; no better-sqlite3 dependency or migration is included.
+- Added a Node.js engine requirement (>=22.13.0).
+- Added `npm run check` to syntax-check backend JavaScript and the Kingdee/SQLite comparison script.
+- Documented the expected ExperimentalWarning for node:sqlite instead of suppressing it.
+- Excluded node_modules, local SQLite databases, macOS metadata, and real .env files.
+- Retained .env.example and package-lock.json.
+
+Validation performed during packaging
+- Source archive extracted and cleaned.
+- Store Type mapping confirmed in fieldMaps.js and both service mappings.
+- Package manifest and lockfile dependency roots checked for consistency.
+- JavaScript syntax checks are run separately before release packaging.
+
+Deployment steps
+1. Install a compatible Node.js 22.x runtime (22.13.0 or later).
+2. Copy Backend/.env.example to Backend/.env and enter approved environment-specific credentials locally. Never share the .env file.
+3. From Backend, run `npm ci`, then `npm run check`.
+4. Run `npm start`; verify the backend starts and the existing 30-minute sync schedule is logged.
+5. Verify /health, login/password-change flow, role-based access, live Kingdee sync, Store Type display, and Excel exports in the target environment.
+
+Important
+The built-in node:sqlite module may emit ExperimentalWarning on Node.js v22.23.4. The warning is not suppressed in this package. The package has not been certified by a live production integration test in the packaging environment; complete the deployment checks above before promoting it to production.

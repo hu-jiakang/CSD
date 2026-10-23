@@ -1,0 +1,1434 @@
+﻿================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES.txt
+================================================================================
+
+v18.5 - Role / Department Matrix Revision
+
+- CSH is HQ level. CSH Department does not restrict HQ data.
+- KAM is CUSTOMER level.
+- KAM Customer List scope: Customer Sales Dept = Employee Department OR Customer Region = Employee Department OR Customer District = Employee Department. Exact value comparison only.
+- KAM Store List is limited to Stores associated with the KAM-accessible Customers (Customer Area basis).
+- KAM Customer Store List is limited to Customer Store records associated with the KAM-accessible Customers / Customer Area of those Stores.
+- KAM Binding List is limited to bindings for Stores associated with the KAM-accessible Customers / Customer Area.
+- District/Region/Area role filtering is preserved from the prior working baseline.
+- HQ sheet visibility remains Store List, Customer List, Binding List.
+- District/Region sheet visibility remains Store List, Customer List, Customer Store List, Binding List, DSTDLR.
+- KAM sheet visibility: Store List, Customer List, Customer Store List, Binding List.
+- Area sheet visibility remains Store List, Binding List.
+- Existing Customer and Store exclusions remain unchanged.
+- No F_RTA_Territory field is added to Customer or Store queries.
+- FSALDEPTID is selected from Customer master but is not used in Kingdee WHERE clauses.
+
+v19.0 - Summary Performance Compatibility Fix
+
+- Reduced Binding employee lookup filter batch size from 200 to 50.
+- Kingdee ExecuteBillQuery rejected the 200-employee OR filter as too long.
+- Preserves v18.9 page-size optimizations and the 5-minute summary cache.
+- No changes to authorization, active-only summary filtering, KPI calculations, sorting, hierarchy, binding roles, exclusions, or Excel extraction.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_DASHBOARD_SUMMARY.txt
+================================================================================
+
+Customer & Store Dashboard - Dashboard Summary Revision
+
+Purpose:
+- Follow the proven EKSBASE pattern of keeping heavy data processing in the backend.
+- Add a dedicated /api/dashboard-summary endpoint.
+- Keep the existing Store, Customer, Customer Store, Binding and Excel export routes unchanged.
+
+Backend changes:
+- Added src/services/dashboardSummaryService.js.
+- Added src/controllers/dashboardSummaryController.js.
+- Added src/routes/dashboardSummary.js.
+- Added the protected /api/dashboard-summary route.
+- Binding service accepts an optional already-authorized Store List to avoid repeating the Store master query for dashboard summary generation.
+- Dashboard summary data is cached for 30 seconds per authorization scope.
+
+Frontend changes:
+- Dashboard no longer downloads /api/stores and /api/customers page-by-page.
+- Dashboard no longer calls /api/customer-stores/export to read Binding List data.
+- Dashboard calls /api/dashboard-summary and receives only KPI/area summary rows.
+- Excel extraction remains unchanged and continues to use /api/customer-stores/export.
+- Existing login, first-login password change, session handling, role visibility and export behavior are retained.
+
+
+V18.7 PERFORMANCE OPTIMIZATION
+- Reduced duplicate Kingdee Customer/Store master queries in customerStoreService.
+- The dashboard summary now reuses the same raw Customer and Store query results for all downstream mapping.
+- Preserved existing authorization, KAM, exclusions, inactive status, hierarchy, binding, DSTDLR, and Excel extraction behavior.
+- Increased dashboard summary cache TTL from 30 seconds to 5 minutes to reduce repeated Kingdee loads during dashboard navigation.
+- No frontend changes required.
+
+
+V18.9 INITIAL SUMMARY PERFORMANCE OPTIMIZATION
+- Increased Customer/Store master pagination from 500 to 1000 rows per Kingdee request in customerStoreService.
+- Increased Binding master pagination from 500 to 1000 rows per Kingdee request.
+- Increased Binding employee lookup filter batching from 50 to 200 employee codes per request, reducing sequential Kingdee employee queries substantially.
+- No changes to authorization, KAM scope, exclusions, inactive rules, hierarchy, KPI calculations, binding role rules, DSTDLR, or Excel extraction logic.
+- Frontend does not require replacement for this backend-only performance revision.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V19_6.txt
+================================================================================
+
+Customer & Store Dashboard Backend v19.6
+
+Purpose: Make the active-only Summary totals match the KPI values without changing existing extraction or authorization behavior.
+
+Changes:
+- Summary area groups now include active customers even when they do not have an active Store row.
+- Summary area groups now include active bindings even when their Store is inactive, so active binding totals are represented.
+- Missing hierarchy values are grouped under Unassigned rather than dropped.
+- Added activeBindings to dashboard-summary response.
+- Existing totalBindings remains available for compatibility.
+- Existing authorization, KAM Customer Area logic, exclusions, inactive rules, Binding List, DSTDLR, Excel extraction, login/session and cache/warm behavior are preserved.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V20_0_ACTIVE_DASHBOARD.txt
+================================================================================
+
+Customer & Store Dashboard Backend v20.0
+
+Purpose: Active-only dashboard summary alignment.
+
+Changes:
+- Summary customer counts are grouped directly from the authorized active Customer master, preventing duplicate customer counts across Store groups.
+- Summary binding counts include every authorized active PS/NHT/FL binding, including bindings attached to inactive Stores, so the active binding total is represented.
+- Bindings without a usable Store mapping are retained under Unassigned at the root/appropriate scope.
+- Existing total/active KPI fields remain available to the API for compatibility; frontend decides which cards to display.
+- Existing authorization, KAM Customer Area logic, Store/Customer exclusions, inactive status rules, binding roles, hierarchy, DSTDLR, Excel extraction, login/session, and cache behavior are preserved.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V20_1.txt
+================================================================================
+
+Customer & Store Dashboard Backend v20.1
+
+Purpose:
+- Restore the Dashboard Summary to the established STORE-BASIS hierarchy.
+- Keep dashboard Summary active-only.
+- Keep KPI calculations active-only.
+- Keep the existing Excel Export completely unchanged.
+
+Summary behavior:
+- Area rows are created from active Store records, not from the Customer master.
+- Active Customers are counted against the first active Store associated with each Customer Code, preventing duplicate customer counts across areas.
+- Active Customers with no active Store are retained once under Unassigned at the root summary so the root Total Active Customer count matches the Active Customers KPI.
+- Active bindings are counted by their active Store.
+- Active bindings without an active Store are retained once under Unassigned at the root summary so the root Total Active binding count matches the Active Binded PS/NHT/FL KPI.
+- Child drill-down levels remain Store-basis and do not inject unrelated customer-master rows.
+- Summary rows remain sorted largest to smallest by Store Count.
+
+No changes to authorization, KAM logic, exclusions, login/session, or Excel extraction.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V20_2.txt
+================================================================================
+
+Customer & Store Dashboard Backend v20.2
+
+- Added separate dashboard summary views: Stores and Customers.
+- Store summary is strictly Store-basis: Area | Active Store Count | Active Binding.
+- Customer summary is Customer-basis: Area | Active Customer Count | Active Customer Store Count.
+- Customer view supports organizational drill-down to Customer level.
+- Summary totals are returned explicitly for the current scope so the frontend does not recompute totals from filtered display rows.
+- Existing active-only KPI totals remain available.
+- Existing authorization, KAM scope, exclusions, inactive status, binding rules, login/session, warm/cache behavior, and Excel export logic are preserved.
+- Excel export endpoint and formatting were not changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V20_3.txt
+================================================================================
+
+Revision v20.3: Store/Customer tab summary logic correction
+- Store tab remains strictly Store-basis.
+- Active Store rows only; no Unassigned binding row is displayed.
+- Root Store-tab Total Active Binding matches the Active Binded PS/NHT/FL KPI, while child levels remain scoped to active Stores.
+- Customer tab remains independently Customer-basis and retains all active authorized Customers in the root total.
+- Customer tab active customer/store totals remain independent of Store-tab grouping.
+- Excel export endpoint and export utility were not modified.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V20_5.txt
+================================================================================
+
+Customer & Store Dashboard Backend v20.5
+
+Customer-basis summary alignment:
+- Customer Area is the existing Customer district value derived from the territory lookup.
+- KAM Customer-basis summary now starts at Customer Area (district) instead of Sales Dept.
+- Customer hierarchy remains Customer Area (District) -> Region -> Sales Dept -> Customer.
+- Existing export implementation is unchanged.
+- Existing Store-basis summary, authorization, exclusions, binding logic, and active-only totals are preserved.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V20_6.txt
+================================================================================
+
+Customer & Store Dashboard Backend v20.6
+
+Customer Area resolution fix:
+- Kept the established Customer Area hierarchy: Sales Dept -> Region -> District.
+- Customer District/Area is resolved from the Region department Territory first.
+- If Region is blank/unresolved, the Customer Sales Dept department Territory is used as fallback.
+- Applied consistently to Customer List and Customer Store data used by the dashboard/export enrichment.
+- Existing Export layout is unchanged.
+- Existing Store summary, Customer summary, authorization, exclusions, binding logic, and active-only totals are preserved.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V20_7.txt
+================================================================================
+
+Customer & Store Dashboard Backend v20.7
+
+Customer Area resolution completeness fix:
+- Fixed Department Territory lookup pagination/batching.
+- The previous lookup returned a maximum of 500 Department rows even when more than 500 unique Customer Area department codes were supplied.
+- This caused valid Customers beyond the first 500 Department mappings to resolve to blank District/Customer Area and appear as Unassigned.
+- Department Territory lookup now queries all supplied Department codes in safe batches of 200.
+- Existing Customer Area hierarchy remains Sales Dept -> Region -> District.
+- Existing Export layout, Store summary, Customer summary, authorization, exclusions, binding logic, and active-only totals are unchanged.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V22_2.txt
+================================================================================
+
+Customer & Store Dashboard Backend v22.2
+
+Purpose
+- Fix valid DISTRICT authorization such as employee department NLU.
+- Preserve v22.1 SQLite master-data performance architecture.
+- Preserve existing role-to-access-level mapping and exact department matching rule.
+- Preserve Export logic and all existing customer/store exclusions.
+
+Changes
+1. accessService.js
+   - Non-HQ authorization now resolves the employee Department against BOTH cached Customer and Store hierarchy data.
+   - Exact rule remains:
+       Department == District OR Department == Region OR Department == Sub-region
+   - Customer hierarchy:
+       Sales Dept / Region / District
+   - Store hierarchy:
+       Sub-region / Region / District
+   - Role still determines access level and sheet permissions.
+   - No hierarchy expansion is introduced.
+
+2. customerStoreService.js
+   - Persistent master-data cache key bumped to organization:100:v22.2.
+   - This intentionally prevents stale pre-v22.2 hierarchy mappings from being reused.
+   - Export/business rules are unchanged.
+
+3. departmentService.js
+   - Department Territory lookup remains in small batches of 25.
+   - Batches are now processed sequentially to avoid Kingdee filter-length/concurrency failures during master-data refresh.
+
+Validation
+- Node syntax checks passed for all three revised files.
+- Mock authorization test passed for RSD + department NLU, returning accessLevel DISTRICT and district scope NLU.
+
+Deployment
+- Replace the three files using their original filenames in the current v22.1 Backend.
+- No frontend changes are included.
+- No credentials or secrets are included.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V22_3.txt
+================================================================================
+
+Customer & Store Dashboard Backend v22.3
+
+Purpose
+- Correct the Store District/Territory mapping that caused an authorized District user (for example NLU) to see 0 active stores and an Unassigned hierarchy.
+- Correct Customer Area fallback when a Region mapping exists but has no Territory while Sales Dept has the valid Territory.
+- Preserve existing authorization rules and Export output/business logic.
+
+Changes
+1. customerStoreService.js
+   - Store Territory lookup now uses F_RTA_Department.FNumber (verified Store Territory source) instead of only F_RTA_Region.FNumber.
+   - Store mapping uses Store Department mapping first, Region mapping only as fallback.
+   - Customer District mapping prefers a lookup containing an actual Territory, then falls back between Customer Region and Sales Dept.
+   - Cache key advanced to v22.3 so the corrected master mapping is rebuilt once.
+
+2. accessService.js
+   - Existing exact Department == District/Region/Sub-region scope matching is retained.
+   - No hard-coded NLU or other District was added.
+
+Export
+- Export controller/business logic is not changed.
+- No Export columns, exclusions, inactive rules, or formatting rules are changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V22_4.txt
+================================================================================
+
+Customer & Store Dashboard Backend v22.4
+
+Purpose: Restore the established Store List / Excel Export data path while retaining the v22.3 Customer Area improvements.
+
+Changes:
+- Reverted Store District/Territory mapping to the established Store Region relation path (F_RTA_Region.FNumber -> Department/Territory lookup).
+- Store Department remains the Store Sub-region/Area field and is not used as the Store District source.
+- Reverted the master sync's Store territory lookup input to Store Region codes.
+- Retained v22.3 Customer Area mapping improvements and v22.3 exact authorization scope logic.
+- Export controller/business layout is not changed.
+- No hard-coded NLU was added.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V22_5.txt
+================================================================================
+
+Customer & Store Dashboard Backend v22.5
+
+Purpose: Restore the established Store List / Export data by invalidating the stale v22.3 master-data cache.
+
+Root cause identified:
+- v22.4 restored the correct Store Region -> Territory mapping in code, but the SQLite CACHE_KEY remained v22.3.
+- Therefore the application continued loading the stale v22.3 cache generated with the incorrect Store mapping.
+- This caused the NLU Store List to remain empty and the Export Store List sheet to contain only headers.
+
+Changes:
+- Bumped the persistent master-data cache key from v22.3 to v22.5.
+- This forces one clean Customer/Store master-data rebuild from Kingdee using the restored mapping.
+- No Export controller changes.
+- No Excel columns, formatting, exclusions, inactive rules, or sheet visibility changes.
+- No hard-coded NLU.
+- No authorization-rule changes.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V23_1_CUSTOMER_UNASSIGNED_FIX.txt
+================================================================================
+
+Customer & Store Dashboard Backend v23.1
+
+CUSTOMER UNASSIGNED FIX
+- Customer List data already contains valid Region values and the exported Customer List confirms the active Customers are assigned to NLU.
+- The dashboard was still able to place Customers into Unassigned when the Customer-specific Department -> Territory lookup did not resolve.
+- Customer hierarchy resolution now reuses the established Store Region -> Territory mapping as a fallback for Customer Region.
+- The fallback is data-driven from the existing Store Region/Territory master mapping; no NLU, CLU, WNLU, or ENLU values are hard-coded.
+- Sales Department fallback remains intact.
+- Store hierarchy mapping is unchanged.
+- Authorization, exclusions, inactive rules, Binding logic, Customer Store List, DSTDLR, and Export controller/layout are unchanged.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V23_2_CUSTOMER_STORE_HIERARCHY.txt
+================================================================================
+
+V23.2 - Customer/Store Hierarchy Source Separation
+
+1. STORE HIERARCHY
+   - Store Sub-Region comes ONLY from Store Department (F_RTA_Department).
+   - Store Region comes ONLY from Store Region (F_RTA_Region).
+   - Store District comes ONLY from the Store Region -> Department Territory lookup.
+   - Customer Region/District is not used to place Stores in the Store hierarchy.
+
+2. CUSTOMER HIERARCHY
+   - Customer Region comes ONLY from Customer F_RTA_Region.
+   - Customer District comes ONLY from the Territory mapped from Customer F_RTA_Region.
+   - Sales Department (FSALDEPTID) is NOT used as a Customer hierarchy fallback.
+   - Store Region/District is NOT used as a Customer hierarchy fallback.
+
+3. WHY
+   - A Store and its linked Customer can legitimately belong to different geographic
+     assignments. Each tab must therefore follow its own master-data geography.
+   - This prevents a Customer from being moved to a District based on its linked
+     Store or Sales Department.
+
+4. ACCESS CONTROL
+   - Existing authorization and access filtering are preserved.
+   - This revision changes only the source used to derive Customer/Store geographic
+     hierarchy; it does not broaden user access.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V23_3_CUSTOMER_REGION_LOOKUP_FIX.txt
+================================================================================
+
+v23.3 â€” Customer Region lookup robustness fix
+
+Problem observed
+- Customer Dashboard still showed only a subset of active Customers under CLU/WNLU/ENLU and placed the remaining active Customers under Unassigned.
+- The expected source file has all 648 active Customers assigned to Customer Region CLU/WNLU/ENLU and Customer District NLU.
+
+Fix
+- Customer hierarchy remains strictly Customer-based: Customer Region -> Customer District.
+- Department/Territory resolution now accepts both the Customer Region relation FNumber and FName as lookup keys. This handles Kingdee records where the Region code is missing/inconsistent but the Region name is populated.
+- Department query matches FNumber OR FName and stores the returned Territory under both identifiers.
+- Persistent department lookup cache namespace bumped to v23_3 so stale v23/v23.2 department mappings are not reused.
+- Persistent master-data cache namespace bumped to v23_3 so the Customer/Store masters are refreshed after restart.
+
+Strict source separation preserved
+- Store hierarchy: Store Sub-region / Store Region / Store District only.
+- Customer hierarchy: Customer Region / Customer District only.
+- No Sales Department fallback is used for Customer geography.
+- Store geography is never used to populate Customer geography.
+- Authorization, exclusions, inactive rules, binding logic, DSTDLR logic, Customer-Store logic, and export layout are otherwise unchanged.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V23_4_CUSTOMER_DRILLDOWN.txt
+================================================================================
+
+REVISION NOTES â€” v23.4 Customer Drill-Down Hierarchy Fix
+
+Customer tab hierarchy is now strictly:
+  HQ -> District -> Region -> Customer
+
+Store tab hierarchy remains strictly:
+  HQ -> District -> Region -> Sub-region -> Store
+
+Customer-tab rules:
+- District rows are based only on Customer District.
+- Region rows are based only on Customer Region.
+- After selecting a Region, the next level is Customer directly.
+- Customer rows use Customer Code / Customer Name.
+- Sales Department is NOT a Customer hierarchy level.
+- Store Sub-region is NOT a Customer hierarchy level.
+- Store geography is NOT used to derive Customer hierarchy.
+- Customer District/Region source logic from v23.3 is preserved.
+
+Access behavior:
+- HQ/Admin starts Customer tab at District.
+- District access starts at Region.
+- Region/Customer access starts at Customer (within the authorized scope).
+- Existing authorization filtering is preserved.
+
+No hard-coded NLU/CLU/WNLU/ENLU values were added.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V23_5_CUSTOMER_STORE_TAB_SEPARATION.txt
+================================================================================
+
+REVISION v23.5 - CUSTOMER/STORE TAB SEPARATION AND DRILL-DOWN ENFORCEMENT
+
+Purpose
+-------
+Correct the dashboard API so the frontend can explicitly request the Customer
+view. The previous dashboardSummaryController did not forward req.query.view
+to dashboardSummaryService.getSummary(), so the service defaulted to the Store
+view even when the Customer tab was selected. This allowed Store hierarchy
+levels such as Sales Department/Sub-region to appear in the Customer tab.
+
+Required hierarchy
+------------------
+STORE TAB:
+  HQ -> District -> Region -> Sub-region -> Store
+
+CUSTOMER TAB:
+  HQ -> District -> Region -> Customer
+
+Data-source separation
+----------------------
+Store geography is derived only from Store fields:
+  Store Sub-region, Store Region, Store District.
+
+Customer geography is derived only from Customer fields:
+  Customer Region, Customer District.
+
+Customer-Store linkage is used only for relationship/count information, such
+as Active Customer Store Count. It must never determine Customer District,
+Customer Region, or Customer hierarchy levels.
+
+Sales Department is not a Customer hierarchy level and is not used to derive
+Customer geography.
+
+Changes
+-------
+1. dashboardSummaryController now reads req.query.view and passes it to
+   dashboardSummaryService.getSummary().
+2. dashboardSummaryService already enforces the Customer hierarchy as only:
+   district -> region -> customer.
+3. Store hierarchy remains district -> region -> subRegion -> store.
+4. Fixed an existing customerService mapping typo where salesDeptCode was
+   referenced without being assigned.
+5. No hard-coded geographic values were added.
+6. Existing authorization, exclusions, inactive handling, binding logic,
+   customer-store linkage, DSTDLR, and export behavior are preserved.
+
+Expected API behavior
+---------------------
+GET /api/dashboard-summary?view=customers
+  -> Customer root: District rows
+
+GET /api/dashboard-summary?view=customers&level=region&parentValue=<district>
+  -> Region rows under that Customer District
+
+GET /api/dashboard-summary?view=customers&level=customer&parentValue=<region>
+  -> Customer rows under that Customer Region
+
+GET /api/dashboard-summary?view=stores
+  -> Store root: District rows
+
+GET /api/dashboard-summary?view=stores&level=region&parentValue=<district>
+  -> Store Region rows
+
+GET /api/dashboard-summary?view=stores&level=subRegion&parentValue=<region>
+  -> Store Sub-region rows
+
+GET /api/dashboard-summary?view=stores&level=store&parentValue=<subRegion>
+  -> Store rows
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V23_6_CUSTOMER_DRILLDOWN_COMPATIBILITY.txt
+================================================================================
+
+REVISION V23.6 - CUSTOMER DRILL-DOWN COMPATIBILITY FIX
+
+Purpose
+-------
+Fix Customer-tab drill-down when the existing frontend sends Store-hierarchy level names.
+
+Required hierarchy
+------------------
+Customer tab: HQ -> District -> Region -> Customer
+Store tab:    HQ -> District -> Region -> Sub-region -> Store
+
+Changes
+-------
+1. Customer view now normalizes legacy requested levels.
+   - district -> district
+   - region -> region
+   - customer -> customer
+   - subRegion/sub_region -> customer
+   - salesDept/sales_dept -> customer (compatibility only)
+   - store -> customer (compatibility only)
+2. Customer view never groups by Sales Department, Store Sub-region, or Store.
+3. Customer geography remains sourced only from Customer Region / Customer District.
+4. Store geography remains sourced only from Store Sub-region / Store Region / Store District.
+5. Added hierarchy metadata to the Customer summary response.
+6. Authorization, active/inactive filtering, customer-store linkage counts, bindings, exclusions, DSTDLR handling, and export logic are preserved.
+
+Important
+---------
+The compatibility aliases exist only to support an older frontend request parameter.
+They do not change the Customer hierarchy or introduce Store/Sales Department data into it.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V23_BASELINE_RESTORE.txt
+================================================================================
+
+Customer & Store Dashboard Backend v23
+
+KNOWN-GOOD BASELINE
+- Functional backend files restored from Customer_Store_Dashboard_Performance_v21_3.zip.
+- Export controller is preserved exactly from v21.3.
+- Store service preserves the established Store Region -> Territory/District mapping.
+- Access service preserves the established exact role/scope authorization rules.
+- Customer/Store/Binding/Auth services preserve v21.3 functional behavior.
+
+NEW REVISIONS
+- Persistent SQLite cache added for raw Customer and Store master data.
+- Persistent SQLite cache added for Department -> Territory lookups.
+- Customer Area resolution now uses a Region lookup only when it contains a valid Territory; otherwise it falls back to the Sales Department lookup.
+- Store Region -> Territory mapping is unchanged.
+- Export controller, Excel columns, sheet order, sheet visibility, exclusions, inactive rules and formatting are unchanged.
+- No NLU hard-code was added.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_10_CUSTOMER_STORE_LIST_FILENAME.txt
+================================================================================
+
+v24.10 â€” Customer Store List Export Filename
+
+1. Corrected the export filename to the requested project-specific format:
+   Customer_Store_List_<Employee Department>_<YYYYMMDD_HHMMSS>.xlsx
+2. Employee Department is taken from the authenticated employee department display name, falling back to department code only if the display name is unavailable.
+3. Timestamp is generated at export start using YYYYMMDD_HHMMSS.
+4. Removed the previous EKSBASE_Report filename prefix; this project is separate from EKSBASE Report.
+5. Frontend fallback filename changed to Customer_Store_List.xlsx.
+6. No dashboard hierarchy, authorization, authentication, search, binding, DSTDLR, customer/store relationship, or active/inactive logic was changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_14_MOBILE_TABLE_REGRESSION_FIX.txt
+================================================================================
+
+v24.14 Mobile Table Regression Fix
+
+- Rebased on v24.12 responsive layout, which was visually better than v24.13.
+- Reverted the v24.13 label-span/max-width changes that caused Region names to render as C..., W..., E... on narrow screens.
+- Mobile summary table uses a stable 46% / 27% / 27% column split so hierarchy labels remain readable while numeric columns remain aligned.
+- No backend/data/auth/authorization/export/business logic changes.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_2_CUSTOMER_STORE_SOURCE_SEPARATION.txt
+================================================================================
+
+v24.2 CUSTOMER / STORE SOURCE-SEPARATION REVISION
+
+Purpose
+- Preserve existing working functions while making the Customer and Store dashboard data sources explicit and independent.
+
+Customer tab
+- Hierarchy: HQ -> District -> Region -> Customer -> Store.
+- Customer count comes from the active Customer master records.
+- Customer District/Region comes only from Customer master Customer Region -> Territory/District resolution.
+- Sales Department and Store geography are not used for Customer hierarchy.
+- Customer -> Store count comes only from valid Store records in the Customer Store relationship dataset: nonblank Store Code, active Store, unique Store Code per Customer.
+- Customer-only records with blank Store Code are valid customers and do not become Stores.
+
+Store tab
+- Hierarchy: HQ -> District -> Region -> Sub-region -> Store.
+- Store geography comes only from Store master Store Sub-region/Region/District.
+- Zero-count Unassigned groups are suppressed.
+
+Compatibility / preservation
+- Existing authorization, login, password change, exports, bindings, DSTDLR, search, Store filters, Customer filters, exclusions, and access-level behavior are retained.
+- Department territory cache namespace is bumped to v24_2 to avoid stale v23.x lookup results.
+- Customer/Store Region lookups now accept either Kingdee Region Number or Region Name; this does not introduce a different geography source.
+
+
+Follow-up v24.3: blank-store Customer Store List rows now keep Store Region/District and all Store-side fields blank.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_26_ADMIN_CSH_HQ_ACCESS_FIX.txt
+================================================================================
+
+REVISION v24.26 - ADMIN/CSH HQ Access Alignment
+
+Purpose
+-------
+Restore the previously intended HQ authorization behavior without changing
+any other role authorization or dashboard data logic.
+
+Change
+------
+ADMIN and CSH are now handled identically in accessService.js:
+  ADMIN -> HQ
+  CSH   -> HQ
+
+For both roles, the employee Department does NOT restrict HQ access.
+Therefore an ADMIN or CSH employee assigned to NLU, CLU, WNLU, ENLU, or any
+other department remains authorized at HQ level.
+
+Preserved
+---------
+- All other role access levels and department-scope matching.
+- Store hierarchy: HQ -> District -> Region -> Sub-region -> Store.
+- Customer hierarchy: HQ -> District -> Region -> Customer -> Store.
+- Customer and Store source separation.
+- Customer Store Count behavior.
+- Active/inactive handling.
+- Search behavior.
+- Export behavior and filename format.
+- Table/mobile layout fixes.
+- Existing binding, authorization gates, and data services.
+
+No frontend or data hierarchy logic was changed in this revision.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_28_EKSBASE_LOGIN_FLOW.txt
+================================================================================
+
+v24.28 â€” EKSBASE Login Flow Alignment
+
+Purpose
+- Align standalone login behavior with the established EKSBASE Report authentication flow without changing dashboard business logic or role access.
+
+Changes
+1. Invalid Employee No. and invalid password remain explicit authentication failures and are returned to the login page for display.
+2. First-time/pending password setup is controlled by the persisted must_change_password flag, matching the established EKSBASE flow.
+3. A normal existing credential is not forced into password setup merely because the supplied password equals the historical default password.
+4. Frontend login error handling remains separate from authenticated-session 401 handling so login failures are displayed instead of being treated as session expiry.
+5. Existing password toggle, first-time password setup, session handling, ADMIN/CSH access, dashboard hierarchy, search, export, binding, and data logic are preserved.
+
+Reference
+- EKSBASE standalone authentication validates the employee, verifies the local credential, returns an explicit "Invalid employee number or password." error for a failed normal login, and uses the persisted password-change state for first-time setup.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_3_CUSTOMER_STORE_BLANK_STORE_FIX.txt
+================================================================================
+
+v24.3 - Customer Store List blank-store row source separation
+
+Purpose
+-------
+Fix the Customer Store List export so a customer with no linked Store does not
+show Customer Region/District values again under the Store Region/District columns.
+
+Data rules preserved
+--------------------
+Customer List remains the authoritative Customer master.
+Store List remains the authoritative Store master.
+Customer Store List remains the Customer-to-Store relationship output.
+
+For a customer-only row in Customer Store List:
+- Customer Code/Name/Short Name/Customer Region/Customer District remain populated.
+- Store Code/Store Name and ALL Store-side fields remain blank, including:
+  Sub-region, Region, District, Brand, PS/FL Store, Marketing Channel, Store Type,
+  Main Line of Products, and other Store attributes.
+
+A Store is represented only when an actual Store Code/Store Name exists from the
+Store master and is linked to the Customer.
+
+No changes were made to authentication, authorization, search, dashboard summary,
+Store hierarchy, Customer hierarchy, bindings, DSTDLR, exclusions, or active/inactive
+rules.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_4_CUSTOMER_STORE_INACTIVE_STORE_BLANK.txt
+================================================================================
+
+REVISION V24.4 - Customer Store List Customer-only Inactive Store Fix
+
+Purpose
+-------
+Correct the Customer Store List export for valid Customer-only rows that have no linked Store.
+
+Rule
+----
+If Store Code is blank, the row is a valid Customer-only relationship row and all Store-side fields remain blank, including Inactive Store.
+The Customer inactive status must never be copied into the Store status column.
+
+If a valid Store exists, Store status continues to come from the Store master record exactly as before.
+
+Preserved
+---------
+- Customer hierarchy: HQ -> District -> Region -> Customer -> Store
+- Store hierarchy: HQ -> District -> Region -> Sub-region -> Store
+- Customer geography remains sourced from Customer data.
+- Store geography remains sourced from Store data.
+- Customer Store List remains the relationship layer.
+- Authentication, authorization, search, export structure, binding, DSTDLR, exclusions, and active/inactive rules are otherwise unchanged.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_40_CUSTOMER_UNASSIGNED_MAPPING_FIX.txt
+================================================================================
+
+v24.40 - Customer Unassigned mapping fix
+
+Problem:
+Customer tab still showed 34 customers under Unassigned even though direct Kingdee diagnostics showed those active eligible customers can be resolved through Region and/or Sales Department -> Department Master -> Territory mapping.
+
+Changes:
+1. Customer hierarchy remains strictly Customer Region -> Customer District.
+2. Customer Region Territory remains the primary District source.
+3. Customer Sales Department is used only as a fallback mapping source when Customer Region has no Territory mapping. Sales Department is NOT exposed as a hierarchy level.
+4. Department Master lookup now resolves both FNumber and FName, so Customer Sales Department names can resolve even when the code is blank/different.
+5. Department Master lookup cache version is bumped from v24_2 to v24_40 to invalidate previously cached empty mappings from the older lookup behavior.
+6. Disabled Department Master records remain eligible for mapping because active Customers may still reference them.
+
+Preserved:
+- Existing authorization and role behavior
+- Store hierarchy and Store geography source
+- KAM Customer/Store drilldown
+- Customer Store Count logic
+- Exclusions and inactive rules
+- DSTDLR handling
+- Login flow and EKSBASE-style frontend from v24.37
+- Export behavior
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_44_EMPLOYEE_NO_DEFAULT_PASSWORD.txt
+================================================================================
+
+V24.44 - Employee No. Initial Password
+
+Change:
+- New employee credentials created by ensureDefaultCredential(employeeNo) now use the Employee No. as the initial password instead of the fixed EKSBASELOGIN value.
+
+Preserved:
+- Existing credentials/passwords are not reset.
+- Existing first-login password-change state remains unchanged.
+- Password hashing and credential persistence remain unchanged.
+- Authorization/access logic is unchanged.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_48_ADMIN_ACCOUNT_AND_RESET.txt
+================================================================================
+
+V24.48 - Dedicated ADMIN Account + Admin Employee Password Reset
+
+Changes:
+- Dedicated ADMIN login:
+  Username: ADMIN
+  Password: BOE-ADMIN
+- ADMIN does not require a Kingdee Employee Master record.
+- ADMIN receives HQ access and is not restricted by Employee Department.
+- ADMIN is not forced through first-login password setup.
+- Added POST /api/auth/admin/reset-password, protected by authenticated ADMIN access.
+- Admin reset requires a valid active Employee No.
+- Reset password becomes the employee's own Employee No.
+- Reset sets must_change_password=1.
+- Existing sessions for the reset employee are invalidated.
+- Next login requires Employee No. + Employee No. as the temporary password and then password change.
+- New employee credentials continue to use Employee No. as the initial password.
+- Password change rejects the employee's Employee No. as the unchanged initial password.
+- Existing EKSBASELOGIN credentials remain valid where already stored; the legacy default is also rejected as a new password.
+
+Preserved:
+- Existing role/access hierarchy and dashboard business logic.
+- Existing credential hashing/persistence.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_51_ADMIN_ACCOUNT_ONLY.txt
+================================================================================
+
+V24.51 - Dedicated ADMIN account only for password reset\n\nChange:\n- Admin password reset authorization now checks the authenticated session username (employee_no) equals ADMIN, rather than the Kingdee roleCode.\n- This prevents ordinary employees whose Kingdee roleCode is ADMIN from seeing/using the Admin password reset function.\n\nPreserved:\n- Dedicated ADMIN username/password remains ADMIN / BOE-ADMIN.\n- Employee No. initial/reset password behavior remains unchanged.\n- Existing authorization and dashboard logic remain unchanged.\n
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_53_KINGDEE_LOCAL_DATABASE_ARCHITECTURE.txt
+================================================================================
+
+Customer & Store Dashboard â€“ V24.53
+Kingdee Local Database Architecture
+
+1. Revised the backend database architecture to follow the EKSBASE pattern: Kingdee-sourced dashboard data is persisted locally in SQLite before dashboard services consume it.
+2. The local database is now configurable through DATABASE_PATH and defaults to ./data/kingdee.db.
+3. The Customer & Store Dashboard keeps its own Kingdee dataset/schema; it does not copy EKSBASE tables or datasets.
+4. Added local tables for Customer, Store, Employee, Department, and Kingdee synchronization logs.
+5. Added startup synchronization for Customer, Store, and related Department data from Kingdee.
+6. Customer and Store services now read the local Kingdee database rather than querying Kingdee for every dashboard request.
+7. Employee lookup first uses the local Kingdee employee table and falls back to Kingdee only when the employee is not yet cached, then stores the result locally.
+8. Existing credentials and sessions remain in the same SQLite database file.
+9. Existing DingTalk SSO and Employee No./Password authentication flows are retained.
+10. Existing Customer & Store Dashboard access rules and dataset-specific field mappings are retained.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_54_LOCAL_SYNC.txt
+================================================================================
+
+V24.54 - Centralized Customer/Store/Binding Local Sync
+
+Scope
+- Customer, Warehouse/Store, and Binding are the primary Kingdee datasets.
+- Department is enrichment/supporting lookup for those datasets.
+- Employee Master is not synchronized as a dashboard dataset. Employee data needed to enrich Binding rows is retrieved only during the centralized sync and is stored inside the Binding payload; normal dashboard requests do not query Kingdee for Employee Master.
+
+Changes
+1. Added kingdee_bindings table and indexes to the existing kingdee.db.
+2. Extended the sync engine to synchronize Customer + Store + Binding and referenced Department enrichment.
+3. Binding sync retrieves promoter role/status information during synchronization so Binding List no longer queries Kingdee per user.
+4. Customer, Store, Department and Binding dashboard services now use local SQLite data.
+5. Department service no longer falls back to Kingdee during dashboard requests.
+6. Added one-process synchronization lock so simultaneous manual/scheduled refreshes do not start parallel Kingdee syncs.
+7. Added scheduled synchronization using KINGDEE_SYNC_INTERVAL_MINUTES (default 30 minutes).
+8. Added authenticated POST /api/sync/refresh and GET /api/sync/status.
+9. Added Dashboard Refresh button; successful refresh clears dashboard summary cache and reloads the dashboard.
+10. Removed dashboard-login warm-up that forced a fresh Kingdee extraction; dashboard requests use local data.
+
+Compatibility
+- Existing authentication, DingTalk SSO, access control, customer/store hierarchy, export, search, and dashboard business rules are retained.
+- Diagnostic/master-discovery endpoints and Employee authentication may still use Kingdee directly; they are not part of normal dashboard data retrieval.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_55_LOCAL_SYNC_BASELINE_PRESERVATION.txt
+================================================================================
+
+V24.55 - Local Sync Baseline Preservation / Binding Query Fix
+
+Purpose
+- Preserve the established Customer & Store Dashboard business logic.
+- Keep Customer, Store/Warehouse, and Binding as the primary synchronized datasets.
+- Keep Department as enrichment/supporting organizational lookup only.
+- Do not redesign the existing hierarchy, access rules, authentication, export, or Binding role rules.
+
+Changes
+1. Kept the V24.54.4 Store Department -> Territory enrichment correction because it reduced Store Unassigned records without changing the dashboard hierarchy.
+2. Fixed the centralized Binding sync query by using a non-empty FSTOCK condition while retaining the original RTA_StoreSR_Binding fields and pagination behavior.
+3. Binding records are still enriched with employee role/status during the centralized sync and stored inside the Binding payload; Employee Master is not a dashboard dataset.
+4. Binding service continues to apply the established SP/NHT/FL role filtering after reading synchronized local Binding data.
+5. No frontend changes.
+6. No authentication/password/session changes.
+7. No changes to Customer/Store hierarchy or access-control logic.
+
+Validation target
+- Active Binding should return to the established synchronized result instead of 0.
+- Store Unassigned should remain at the post-V24.54.4 level until the remaining source mappings are explicitly verified.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_56_LOCAL_SYNC_EXCEL_BASELINE.txt
+================================================================================
+
+V24.56 - Local Sync / Excel Baseline Binding Correction
+
+Basis
+- Customer_Store_List_HQ.OPERATIONS_20260925_130535.xlsx was inspected across all three sheets.
+- Store List: 10,486 rows; 5,296 active stores.
+- Customer List: 4,395 rows; 4,236 active customers.
+- Binding List: 3,407 rows; 2,765 active PS/NHT/FL.
+
+Changes
+1. Preserved the existing Customer/Store hierarchy and Department enrichment logic.
+2. Preserved Department as organizational enrichment/support, not a replacement for Customer, Store, or Binding datasets.
+3. Corrected Local Sync Binding extraction to match the established working Binding implementation: query the complete RTA_StoreSR_Binding master with pagination and no FSTOCK filter, then apply Store authorization/enrichment in application logic.
+4. Retained employee role/status lookup only as Binding enrichment required for the existing SP/NHT/FL role filter and inactive status calculation.
+5. No frontend, authentication, session, access-control, Customer, Store, or export changes.
+6. The 95 active Store records with blank District remain a separate source-mapping issue; they are not changed by this Binding correction.
+
+Validation targets from the inspected Excel output
+- Active Stores: 5,296
+- Active Customers: 4,236
+- Binding rows: 3,407
+- Active PS/NHT/FL bindings: 2,765
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_57_LOCAL_SYNC_ORIGINAL_HIERARCHY_FIX.txt
+================================================================================
+
+V24.57 - Local Sync / Original Hierarchy Preservation
+
+Changes
+1. Store enrichment now resolves Store Department first, then Region as fallback, matching the established Customer & Store hierarchy.
+2. Local sync now refreshes the complete Kingdee Department master instead of only a partial referenced-key subset. Department remains enrichment only.
+3. Binding synchronization remains a full RTA_StoreSR_Binding master extraction with employee role/status enrichment; no separate Employee dashboard dataset is introduced.
+4. Binding SQLite snapshot is replaced transactionally on successful sync so stale bindings cannot remain.
+5. Authentication, password hashes, sessions, DingTalk SSO, access control, Customer logic, Binding filtering, frontend and export logic are preserved.
+
+Known-good Excel acceptance targets
+- Active Stores: 5,296
+- Active Customers: 4,236
+- Binding rows: 3,407
+- Active PS/NHT/FL bindings: 2,765
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_58_REALTIME_AUTHORIZATION.txt
+================================================================================
+
+V24.58 - Real-Time Employee Authorization
+
+Changes
+1. Employee authorization lookup now queries the current Kingdee BD_Empinfo record first.
+2. SQLite employee data remains a fallback only when the live Kingdee employee query returns no record.
+3. Successful live Employee Master retrieval refreshes the local employee cache.
+4. Removed the 2-minute auth resolution cache so Role and Department changes are reflected on the next authorization resolution.
+5. Existing accessService role-to-access-level mapping is preserved. RSD resolves to DISTRICT; ADMIN resolves to HQ.
+6. No changes to frontend, DingTalk SSO, password handling, Customer/Store hierarchy, Binding logic, or export logic.
+
+Expected behavior
+- Employee 220704002 is authorized from the current Kingdee Employee Master values.
+- If Kingdee returns RSD + SLU, the access resolver receives RSD + SLU instead of the stale ADMIN + HQ.OPERATIONS SQLite values.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_6_CUSTOMER_ACTIVE_STORE_SCOPE.txt
+================================================================================
+
+V24.6 - Customer Active Store Count Scope Fix
+
+The dashboard now keeps the full Customer->Store relationship set separately from Store-tab geography-filtered rows.
+
+Customer Store Count:
+- Starts from active Customers in the current Customer access scope.
+- Counts their valid active linked Stores.
+- Ignores the linked Store's District, Region, and Sub-region for this count.
+- De-duplicates Store Code per Customer.
+
+Store tab remains Store-basis and continues to use Store geography/access rules.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_7_CUSTOMER_STORE_LIST_NO_STORE_STATUS.txt
+================================================================================
+
+REVISION v24.7 â€“ Customer Store List No-Store Status Fix
+
+Targeted fix only. In Customer Store List, rows with no linked Store now keep all Store-side fields blank, including Inactive Store. The previous implementation incorrectly copied the Customer disabled status into the Store disabled field for customer-only rows.
+
+Valid Store relationship rows continue to use the actual Store master inactive status. No authentication, authorization, hierarchy, search, export structure, binding, DSTDLR, active/inactive Customer logic, or other working behavior was changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Backend\REVISION_NOTES_V24_8_EXPORT_INACTIVE_CUSTOMER_AND_EKSBASE_FILENAME.txt
+================================================================================
+
+v24.8 â€” Export Inactive Customer + EKSBASE Report Filename
+
+Targeted export revision based on v24.7. Working dashboard/auth/authorization/hierarchy behavior is preserved.
+
+Changes:
+1. Customer Store List export adds â€œInactive Customerâ€ immediately after Customer District.
+2. Inactive Customer is sourced from the Customer master status.
+3. For Customer-only rows (no Store Code), Inactive Customer remains populated from the Customer status while all Store fields, including Inactive Store, remain blank.
+4. For Customer+Store rows, Inactive Customer reflects the linked Customer status and Inactive Store reflects the Store status.
+5. Export filename is changed from Customer_Store_List_YYYY-MM-DD.xlsx to EKSBASE_Report_YYYY-MM-DD.xlsx using local server date.
+6. Frontend fallback filename updated to EKSBASE_Report.xlsx.
+
+No changes to login, authorization, search, hierarchy, binding, DSTDLR, active/inactive filtering, or existing Store/Customer data rules beyond the requested export column/name changes.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_15_MOBILE_SUMMARY_ALIGNMENT.txt
+================================================================================
+
+Customer & Store Dashboard â€” v24.15
+
+Purpose
+- Correct the mobile summary table layout using the same responsive-table principles proven in the supplied EKSBASE Report CSS.
+
+Changes
+- Keep the summary table at 100% of the available mobile width.
+- Remove the mobile minimum table width and enforce table-layout: fixed.
+- Use three-column widths appropriate to this project: 40% hierarchy, 30% metric 1, 30% metric 2.
+- Prevent numeric columns from moving outside the viewport.
+- Keep hierarchy labels inside their cells with ellipsis when necessary.
+- Preserve the existing desktop/tablet layout.
+- Preserve all existing dashboard logic, authorization, hierarchy/source rules, matching logic, inactive rules, binding logic, and export behavior.
+- Updated the frontend cache-buster from v24.14 to v24.15.
+
+Reference principle
+The supplied EKSBASE Report CSS uses width:100%, min-width:0, table-layout:fixed, explicit mobile column widths, and controlled overflow to keep report columns visible on narrow screens. This revision applies that approach to this project's three-column summary table rather than copying the EKSBASE four-column percentages.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_16_MOBILE_HIERARCHY_LABEL_FIX.txt
+================================================================================
+
+V24.16 â€” Mobile hierarchy label fix
+
+Based on the supplied EKSBASE Report responsive-table approach. Mobile hierarchy labels no longer use nowrap/ellipsis; they can occupy the first column and wrap naturally, preventing values such as CLU.BATAAN-AC from being visually clipped. No backend or business logic changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_17_MOBILE_HIERARCHY_TEXT_CORRECTION.txt
+================================================================================
+
+V24.17 â€” Mobile hierarchy text correction
+
+Purpose:
+- Fix the V24.16 regression where hierarchy labels such as CLU.BATAAN-AC were broken at individual characters.
+
+Changes:
+- Adapted the responsive-table approach from the supplied EKSBASE Report reference.
+- Mobile summary columns use 44% / 28% / 28%.
+- Removed overflow-wrap:anywhere from hierarchy labels.
+- Hierarchy labels now use normal word breaking with break-word only when a genuinely long value requires it.
+- Chevron keeps a fixed width and the label uses the remaining first-column space.
+- No backend/data/business logic changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_18_SEARCH_FIX.txt
+================================================================================
+
+V24.18 â€” Global Customer/Store Search Fix
+
+Problem:
+The dashboard search only filtered the currently displayed summary rows. Searching for a specific customer such as PCC Zone could therefore return only its parent Region/District row or appear to have no useful result.
+
+Changes:
+- Added a global search result dropdown to the dashboard search field.
+- Search uses the access-controlled Customer Store endpoint.
+- Customer search results navigate directly to HQ -> District -> Region -> Customer -> Store.
+- Store search results navigate directly to HQ -> District -> Region -> Sub-Region -> Store.
+- Expanded server-side search fields to include Customer Region/District and Store Sub-region/Region/District/address.
+- Existing summary filtering remains available while typing; no business hierarchy or authorization logic was changed.
+- No EKSBASE-specific naming or logic introduced.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_2.txt
+================================================================================
+
+v24.2 FRONTEND CUSTOMER / STORE DRILLDOWN
+
+Customer: HQ -> District -> Region -> Customer -> Store
+Store: HQ -> District -> Region -> Sub-region -> Store
+
+Customer selection remains in the breadcrumb only after the Customer row is actually clicked. At the Customer leaf, the table is replaced by that Customer's valid active linked Stores. Duplicate Store Codes are suppressed.
+
+Script cache version updated to v24.2.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_21_SEARCH_SUMMARY_LEVEL.txt
+================================================================================
+
+v24.21 - Global Search Summary Level Fix
+
+Global Search hierarchy behavior now reflects the searched hierarchy level instead of jumping directly to a leaf Store/Promoter.
+
+Rules:
+- District search -> Store tab summary at District scope (HQ -> District -> Region).
+- Region search -> Store tab summary at Region scope (HQ -> District -> Region -> Sub-region).
+- Sub-region search -> Store tab summary at Sub-region scope (HQ -> District -> Region -> Sub-region -> Store).
+- Store search -> Store leaf.
+- Customer search -> Customer tab leaf (HQ -> District -> Region -> Customer -> Store).
+- Promoter search -> assigned Store leaf using Binding List geography.
+
+Hierarchy results are prioritized for exact District/Region/Sub-region matches. Customer, Store, and Promoter searches remain sourced independently and existing authorization/data separation is preserved.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_22_MOBILE_FIRST_COLUMN_WIDTH.txt
+================================================================================
+
+V24.22 â€” Mobile Summary First Column Width
+
+Changed only responsive summary-table layout. On screens <=620px, the first hierarchy column now uses 50% of the table width and the two metric columns use 25% each. This uses previously unused horizontal space for Region/Sub-region/Customer/Store labels while keeping metric columns aligned. No backend, data, authorization, search, hierarchy, binding, inactive-status, or export logic changed.
+
+
+V24.23: Increased mobile hierarchy column to 60% and reduced metric columns to 20% each; no JS/backend changes.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_24_MOBILE_TABLE_CELL_FIX.txt
+================================================================================
+
+V24.24 â€” Mobile Summary Table Cell Fix
+
+Problem: hierarchy label classes were applied directly to <td> elements and display:flex was applied to those table cells. This broke native table column sizing and created a large blank area between the hierarchy label and metric columns.
+
+Fix: render the hierarchy <td> as a normal table cell with class hierarchy-cell and place group-row-label/store-row-label on an inner div. The existing flex behavior is retained only for the inner label wrapper.
+
+No backend, data, authorization, hierarchy, search, binding, or export logic changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_32_DYNAMIC_KPI_LAYOUT.txt
+================================================================================
+
+V24.32 â€” Dynamic KPI card layout
+
+Changed the KPI grid so its columns automatically adapt to the number of visible KPI cards.
+- 3 visible cards: 3 equal columns.
+- 2 visible cards (e.g. Area access): 2 equal columns using the available width.
+- 1 visible card: 1 column using the available width.
+- Mobile widths use a smaller minimum card width while preserving the same dynamic behavior.
+No KPI values, access rules, hierarchy, or data logic were changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_44_EKSBASE_PASSWORD_UI.txt
+================================================================================
+
+V24.44 - EKSBASE-style First-Time Password UI
+
+Source comparison:
+- EKSBASE Report Frontend was used as the visual reference for the first-time password setup.
+- Customer & Store Dashboard branding and dashboard functionality are preserved.
+
+Changes:
+- Replaced the browser prompt-based first-login password change with an in-page password setup screen.
+- Added New Password and Confirm New Password fields.
+- Added show/hide password controls matching the EKSBASE-style UI.
+- Added inline validation and saving state.
+- Preserved the existing /api/auth/change-password endpoint and passwordChangeToken flow.
+- Initial password behavior remains controlled by the backend.
+- Existing dashboard login, authorization, hierarchy, search, export, and summary logic was not intentionally changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_49_EKSBASE_ADMIN_RESET_UI.txt
+================================================================================
+
+V24.49 â€” ADMIN reset modal revised to closely match EKSBASE Report styling and structure.
+Temporary/reset password remains the employee's own Employee No.; employee must change it at next login. Backend unchanged.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_50_EKSBASE_ADMIN_RESET_MODAL_POSITION.txt
+================================================================================
+
+V24.50 - Restored the shared date-modal base styles from the EKSBASE Report so the Admin Password Reset dialog is a true fixed centered overlay. No authentication/API logic changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\Frontend\REVISION_NOTES_V24_51_ADMIN_ACCOUNT_ONLY.txt
+================================================================================
+
+V24.51 - Dedicated ADMIN account only for Admin Password Reset UI\n\nChange:\n- Admin Password Reset button/modal is shown only when the logged-in account Employee No./username is exactly ADMIN.\n- Employees with roleCode ADMIN no longer see the reset control.\n
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_19_GLOBAL_SEARCH_STORE_SOURCE_FIX.txt
+================================================================================
+
+v24.19 â€“ Global Search Store Source Fix
+
+Issue
+Global Search used /api/customer-stores as the only data source. That endpoint intentionally builds its Store hierarchy from stores linked to the accessible Customer master. Stores whose linked Customer is not present in the Customer List could therefore be missing from Global Search. Example: ABENSON stores are present in Store List but ABENSON is not present in the supplied Customer List export.
+
+Fix
+1. Frontend Global Search now searches Customer List and Store List independently using /api/customer-stores and /api/stores.
+2. Store search now matches Store Code, Store Name, linked Customer Code/Name/Short Name, Sub-region/Department, Region, District/Territory, and Address.
+3. Store results are sourced directly from Store List, so Store-side geography remains Store Sub-region -> Store Region -> Store District.
+4. Customer results remain sourced from Customer List, so Customer-side geography remains Customer Region -> Customer District.
+5. Existing authorization and access scope are preserved by both backend endpoints.
+
+No changes to authentication, dashboard hierarchy rules, binding logic, inactive rules, customer-store relationship logic, or export layout.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_2.txt
+================================================================================
+
+v24.2 STABLE CUSTOMER / STORE SOURCE-SEPARATION REVISION
+
+This revision is intentionally incremental from the working v23.7 backend and v24.1 frontend.
+
+Customer Tab:
+HQ -> District -> Region -> Customer -> Store
+- Active Customer counts come from the Customer master.
+- Customer District/Region come only from Customer master Customer Region -> Territory/District resolution.
+- Sales Department and Store geography never determine Customer hierarchy.
+- Customer -> Store counts use valid active Store records from the Customer-Store relationship output: Store Code must be populated, the Store must be active, and each Store Code is counted once per Customer.
+- Customer-only records with blank Store Code remain valid Customers and do not become Stores.
+
+Store Tab:
+HQ -> District -> Region -> Sub-region -> Store
+- Store geography comes only from Store master fields.
+- Zero-count Unassigned Store groups remain suppressed.
+
+Technical compatibility:
+- Existing authentication, password-change flow, authorization, access scopes, search, exports, bindings, DSTDLR, exclusions, inactive rules, and API routes are preserved.
+- Department territory cache namespace is bumped to v24_2 to prevent stale v23.x lookup results.
+- Customer and Store Region lookups accept either Kingdee Region Number or Region Name while preserving the same source dimension.
+- Frontend cache version is 24.2.
+
+Validation reference from Customer_Store_List_2026-09-08 (5).xlsx:
+- Active Stores: 1,234
+- Active Customers: 648
+- Active Customer distribution: CLU 194, WNLU 251, ENLU 203
+- Active Customer-only records without a Store: 441
+- Active valid linked Store rows: 677 unique Store Codes
+
+No hard-coded CLU/WNLU/ENLU/NLU values were added to the application.
+
+
+Follow-up v24.3: blank-store Customer Store List rows now keep Store Region/District and all Store-side fields blank.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_20_PROMOTER_GLOBAL_SEARCH.txt
+================================================================================
+
+Customer & Store Dashboard v24.20 â€“ Promoter Global Search
+
+Purpose
+Add Promoter Name/Code search to the existing Global Search without changing Customer/Store hierarchy, authorization, export, or data-matching behavior.
+
+Changes
+- Added authenticated GET /api/bindings/search endpoint.
+- Endpoint uses the existing Binding Service, which already applies authorized-store scope and resolves Promoter Code/Name, Role, and assigned Store.
+- Search matches Promoter Code, Promoter Name, Role, Store Code/Name, and Store geography fields.
+- Results are grouped to one result per Promoter and include an authorized assigned Store as the navigation target.
+- Frontend Global Search now queries Customer, Store, and Binding sources independently.
+- Promoter result navigation goes to Store hierarchy: HQ -> District -> Region -> Sub-Region -> Store.
+- The navigation label at the Store leaf uses the actual Store Name/Code, not the Promoter Name.
+- Updated frontend cache-buster to v24.20.
+
+Preserved
+- Customer hierarchy: HQ -> District -> Region -> Customer -> Store.
+- Store hierarchy: HQ -> District -> Region -> Sub-Region -> Store.
+- Customer/Store source separation.
+- Existing access authorization and binding rules.
+- Existing inactive logic, Customer Store Count logic, DSTDLR, export filename, login/authentication, and other working functions.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_30_STORE_BINDING_DRILLDOWN.txt
+================================================================================
+
+v24.30 - Store Binding Drill-down
+
+- Store drill-down remains available only when Active Binding > 0.
+- Added an authenticated /api/bindings/store endpoint for the selected store.
+- Store detail now displays the active PS/NHT/FL bindings with Employee No., Name, and Role.
+- Inactive PS/NHT/FL employees are excluded from the store binding list, matching the Active Binding KPI.
+- Existing hierarchy, authorization, Customer view, search, export, and login behavior preserved.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_31_STORE_DETAIL_REMOVE_REDUNDANT_SUMMARY.txt
+================================================================================
+
+v24.31 - Store Detail Removes Redundant Store Summary
+
+At the Store drill-down level, the one-row Store summary table is removed.
+The Store level now shows only the Binded PS/NHT/FL detail section after the breadcrumb.
+
+Store drill-down remains available only for stores with Active Binding > 0.
+Stores with zero active bindings remain represented at the Sub-region level.
+All other dashboard hierarchy, authorization, search, login, export, and Customer-view behavior is preserved.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_5_CUSTOMER_STORE_COUNT_ACCESS_SCOPE.txt
+================================================================================
+
+Revision v24.5 - Customer Store Count Access-Scope Fix
+
+Purpose:
+Correct the Customer tab's Total Active Customer Store Count. It must represent
+active Stores linked to Customers in the current Customer area/access scope,
+regardless of the Store's own District/Region/Sub-region.
+
+Customer hierarchy remains:
+HQ -> District -> Region -> Customer -> Store
+
+Store hierarchy remains:
+HQ -> District -> Region -> Sub-region -> Store
+
+Change:
+- Frontend Customer-tab Total Active Customer Store Count no longer uses the
+global Active Stores KPI (e.g. 1,234) at the Customer root.
+- It now displays backend summaryTotals.storeCount, which is calculated from
+active Store relationships belonging to the accessible Customers.
+- Store geography is not used to restrict Customer Store Count.
+- Customer-only rows without Store Code do not contribute to Store Count.
+- Existing Customer row counts and Store-tab totals remain unchanged.
+
+No changes to authentication, authorization, search, export, binding, DSTDLR,
+active/inactive rules, or the Store hierarchy.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_52_DINGTALK_SSO.txt
+================================================================================
+
+Customer & Store Dashboard - Revision V24.52
+
+DingTalk Internal Application / Micro App SSO integration.
+
+Frontend:
+- Loads DingTalk JSAPI 3.0.25.
+- Detects DingTalk WebView by user-agent.
+- Requests a DingTalk micro-app authorization code using clientId + corpId.
+- Sends the one-time authorization code to POST /api/auth/dingtalk.
+- Automatically attempts DingTalk SSO when opened inside DingTalk.
+- Keeps Employee No. + Password login for normal browser access.
+- Adds a manual DingTalk sign-in button when opened inside DingTalk.
+
+Backend:
+- Added GET /api/auth/dingtalk/config to expose only the non-secret Client ID and Corp ID needed by the DingTalk JSAPI.
+- Client Secret remains backend-only.
+- Existing POST /api/auth/dingtalk validates the authorization code, resolves DingTalk job number to Kingdee Employee No., applies existing access control, and creates the existing dashboard session.
+- Added DingTalk variables to .env.example.
+
+No existing dashboard authorization rules were changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_54_2_AUTH_DATABASE_SEPARATION.txt
+================================================================================
+
+V24.54.2 - Authentication Database Separation
+
+Purpose
+-------
+Restore the established EKSBASE-style separation between application authentication data and Kingdee-sourced dashboard data.
+
+Changes
+-------
+1. Kingdee SQLite remains Backend/data/kingdee.db.
+   - Customer data
+   - Store/Warehouse data
+   - Binding data
+   - Department enrichment data
+   - Synchronization logs
+
+2. Authentication SQLite is Backend/data/customer-store-dashboard.db.
+   - credentials
+   - sessions
+
+3. Existing credential hashes and sessions in customer-store-dashboard.db are preserved.
+
+4. credentialStore.js and sessionStore.js now use the authentication database.
+
+5. authService.js uses the authentication database when invalidating employee sessions after password reset.
+
+6. DATABASE_PATH continues to control kingdee.db.
+7. AUTH_DATABASE_PATH may optionally override the authentication database path; default is ./data/customer-store-dashboard.db.
+
+Compatibility
+-------------
+No Customer, Store, Binding, Department enrichment, access-control, password hashing, DingTalk SSO, or dashboard business logic was intentionally changed by this revision.
+
+The Kingdee database may still contain legacy credentials/sessions tables created by previous versions. They are no longer used by authentication and are retained to avoid destructive schema changes.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_54_3_UNASSIGNED_FIX.txt
+================================================================================
+
+V24.54.3 - Unassigned District Enrichment Fix
+
+- Preserved V24.54.2 authentication/database separation.
+- Preserved Customer, Store, Binding local SQLite architecture.
+- Fixed Store/Warehouse Department enrichment fallback.
+- Store district mapping now checks the Store Region first, then the Store Department reference.
+- Added Store Department codes/names to the local Department lookup inputs.
+- This addresses Region codes that do not have a direct BD_Department record but whose F_RTA_Department maps to a Territory.
+- No authentication, access-control, dashboard hierarchy, or Binding business rules were changed.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_54_4_LOCAL_SYNC_STORE_TERRITORY_MAPPING.txt
+================================================================================
+
+Customer & Store Dashboard V24.54.4
+Local Sync Store Territory Mapping Fix
+
+Purpose
+- Restore the established Store hierarchy mapping without changing dashboard business logic.
+
+Change
+- Store District/Territory is resolved primarily from BD_STOCK F_RTA_Department.FNumber / F_RTA_Department.FName through the cached BD_Department data.
+- Store Region remains a fallback only when no Department mapping is available.
+- No changes to authentication, access control, Customer hierarchy, Binding logic, or frontend behavior.
+
+Reason
+- The established production mapping resolves Store Territory through BD_Department using F_RTA_Department.FNumber.
+- The Local Sync revision had incorrectly prioritized Store Region, causing many valid Department mappings to appear as Unassigned.
+
+Scope
+- Customer: unchanged.
+- Store/Warehouse: mapping correction only.
+- Binding: unchanged.
+- Department: enrichment source only.
+
+
+================================================================================
+FILE: C:\Users\enday\OneDrive\WORK\Developments\Customer_Store_Dashboard\REVISION_NOTES_V24_6_CUSTOMER_ACTIVE_STORE_SCOPE.txt
+================================================================================
+
+V24.6 - Customer Active Store Count Scope Fix
+
+Customer tab rule:
+HQ -> District -> Region -> Customer -> Store.
+
+Active Customer Store Count is calculated from the full Customer->Store relationship set for the active Customers within the user's Customer access scope. The linked Store's own District, Region, or Sub-region does NOT filter this count.
+
+Only valid Store Codes are counted, each Store Code is counted once per Customer, and the Store must be active according to the Store master (store.disabled === false).
+
+Store tab remains strictly Store-basis:
+HQ -> District -> Region -> Sub-region -> Store.
+
+No changes to authentication, authorization, search, export, binding, DSTDLR, exclusions, active Customer rules, or Store hierarchy.
+
+

@@ -1,6 +1,6 @@
 import { CUSTOMER_FIELDS, STORE_FIELDS, DEPARTMENT_FIELDS } from "../kingdee/fieldMaps.js";
 import { buildOrganizationFilter, buildStoreFilter, rowsToObjects, escapeKingdeeValue } from "../utils/kingdee.js";
-import { replaceCustomers, replaceStores, replaceBindings, upsertDepartment, createSyncLog, completeSyncLog, failSyncLog, getKingdeeDataStats } from "../database/kingdeeDataRepository.js";
+import { replaceMasterDataSnapshot, createSyncLog, completeSyncLog, failSyncLog, getKingdeeDataStats } from "../database/kingdeeDataRepository.js";
 
 const PAGE_SIZE = 1000;
 const FILTER_BATCH_SIZE = 50;
@@ -29,8 +29,10 @@ export function createKingdeeSyncService({ kingdeeClient, scope }) {
     const unique = [...new Set(codes.map(clean).filter(Boolean))]; const result = new Map();
     for (let i=0;i<unique.length;i+=FILTER_BATCH_SIZE) {
       const batch=unique.slice(i,i+FILTER_BATCH_SIZE);
-      const filter=batch.map(c=>`FStaffNumber = '${escapeKingdeeValue(c)}'`).join(" OR ");
-      const rows=await queryAll("BD_Empinfo",EMPLOYEE_FIELDS,`(${filter})`,"FStaffNumber ASC");
+      const employeeFilter = batch.map(c => `FStaffNumber = '${escapeKingdeeValue(c)}'`).join(" OR ");
+      const organizationFilter = buildOrganizationFilter(scope.organizationField, scope.organization);
+      const filter = `(${organizationFilter}) AND (${employeeFilter})`;
+      const rows = await queryAll("BD_Empinfo", EMPLOYEE_FIELDS, filter, "FStaffNumber ASC");
       for(const row of rows){ const code=clean(row.FStaffNumber).toUpperCase(); if(code) result.set(code,row); }
     }
     return result;
@@ -47,21 +49,27 @@ export function createKingdeeSyncService({ kingdeeClient, scope }) {
     running = (async()=>{
       const syncId=createSyncLog("master_data");
       try {
-        const customerRows=await queryAll("BD_Customer",CUSTOMER_FIELDS,buildOrganizationFilter(scope.organizationField,scope.organization));
-        const storeRows=await queryAll("BD_STOCK",STORE_FIELDS,buildStoreFilter(scope.organizationField,scope.organization));
-        const bindingRows=await queryAll("RTA_StoreSR_Binding",BINDING_FIELDS,"","FSTOCK.FNumber ASC,FSR.FNumber ASC");
-
-        // Department is enrichment for Customer, Store and Binding.
-        // Refresh the complete Department master so every existing
-        // Customer/Store department relationship can resolve through the
-        // same HQ -> District -> Region -> Sub-region hierarchy.
-        const departmentRows = await queryAll(
-          "BD_Department",
-          DEPARTMENT_FIELDS,
-          "",
-          "FNumber ASC"
+        // Fetch every source dataset before touching SQLite. Binding data is scoped
+        // to the configured Kingdee organization, just like customer/store data.
+        const organizationFilter = buildOrganizationFilter(scope.organizationField, scope.organization);
+        const customerRows = await queryAll("BD_Customer", CUSTOMER_FIELDS, organizationFilter);
+        const storeRows = await queryAll("BD_STOCK", STORE_FIELDS, buildStoreFilter(scope.organizationField, scope.organization));
+        const bindingRows = await queryAll(
+          "RTA_StoreSR_Binding",
+          BINDING_FIELDS,
+          buildOrganizationFilter("F_RTA_UseOrgId.FNumber", scope.organization),
+          "FSTOCK.FNumber ASC,FSR.FNumber ASC"
         );
-        for (const row of departmentRows) upsertDepartment(row);
+        const departmentRows = await queryAll("BD_Department", DEPARTMENT_FIELDS, organizationFilter, "FNumber ASC");
+
+        // Never replace a valid local snapshot with an empty/invalid source result.
+        const validCustomers=customerRows.filter(row=>clean(row?.FNumber));
+        const validStores=storeRows.filter(row=>clean(row?.FNumber));
+        const validDepartments=departmentRows.filter(row=>clean(row?.FNumber)||clean(row?.FName));
+        if (!validCustomers.length) throw new Error("Kingdee Customer query returned no usable records; existing local snapshot was preserved.");
+        if (!validStores.length) throw new Error("Kingdee Store query returned no usable records; existing local snapshot was preserved.");
+        if (!validDepartments.length) throw new Error("Kingdee Department query returned no usable records; existing local snapshot was preserved.");
+        if (!bindingRows.length) throw new Error("Kingdee Binding query returned no records for the configured organization; existing local snapshot was preserved.");
 
         const employeeMap=await queryEmployees(bindingRows.map(r=>r["FSR.FNumber"]));
         const bindings=bindingRows.map(row=>{
@@ -70,8 +78,15 @@ export function createKingdeeSyncService({ kingdeeClient, scope }) {
           return { bindingKey:`${storeCode}\u0000${promoterCode}\u0000${clean(row.F_RTA_MainStore)}`,storeCode,promoterCode,promoterName:clean(emp.FName)||clean(row["FSR.FName"]),roleCode,roleName:ROLE_NAMES[roleCode]||"",mainStore:clean(row.F_RTA_MainStore),inactivePsNhtFl:employeeInactive(emp),raw:row };
         }).filter(r=>r.storeCode&&r.promoterCode&&ALLOWED_ROLES.has(r.roleCode));
 
-        replaceCustomers(customerRows); replaceStores(storeRows); replaceBindings(bindings);
-        const fetched=customerRows.length+storeRows.length+bindingRows.length; const saved=customerRows.length+storeRows.length+bindings.length;
+        // Commit the refreshed master data as one SQLite transaction. Stale rows
+        // are removed; a failed write rolls back all four datasets together.
+        const saved=replaceMasterDataSnapshot({
+          customers:validCustomers,
+          stores:validStores,
+          departments:validDepartments,
+          bindings
+        });
+        const fetched=customerRows.length+storeRows.length+bindingRows.length+departmentRows.length+employeeMap.size;
         completeSyncLog(syncId,fetched,saved);
         return { stats:getKingdeeDataStats(), fetched, saved, completedAt:new Date().toISOString(), alreadyRunning:false };
       } catch(error){ failSyncLog(syncId,error); throw error; }

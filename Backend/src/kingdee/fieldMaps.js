@@ -28,6 +28,7 @@ export const STORE_FIELDS = [
   "F_RTA_MarketingChannel.FName",
   "F_RTA_MarketingChannel.FNumber",
   "FStockType",
+  "F_PARV_StoreType.FName",
   "F_RTA_MainLine",
   "FCustomerId.FNumber",
   "FCustomerId.FName",

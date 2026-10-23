@@ -1,6 +1,6 @@
 import { DEFAULT_FIRST_LOGIN_PASSWORD, ADMIN_USERNAME, ADMIN_PASSWORD, PASSWORD_MIN_LENGTH } from "./password.js";
 import { authDb } from "../database.js";
-import { getCredential, ensureDefaultCredential, verifyCredential, setPassword, markLogin, resetPassword } from "./credentialStore.js";
+import { ensureDefaultCredential, verifyCredential, setPassword, markLogin, resetPassword } from "./credentialStore.js";
 import { createSession, getSession, deleteSession } from "./sessionStore.js";
 
 export function createAuthService({ employeeService, accessService, dashboardSummaryService, dingtalkService }) {
@@ -89,7 +89,7 @@ export function createAuthService({ employeeService, accessService, dashboardSum
       // Dedicated ADMIN account. It is independent of Kingdee Employee Master
       // and is intentionally not subject to employee role/department lookup.
       if (loginEmployeeNo.toUpperCase() === ADMIN_USERNAME) {
-        if (!ADMIN_PASSWORD || String(password ?? "") !== ADMIN_PASSWORD) {
+        if (String(password ?? "") !== ADMIN_PASSWORD) {
           return {
             ok: false,
             status: 401,
@@ -310,16 +310,7 @@ export function createAuthService({ employeeService, accessService, dashboardSum
     },
 
     authenticate(token) {
-      const session = getSession(token);
-      if (!session) return null;
-      if (String(session.employee_no || "").trim().toUpperCase() === ADMIN_USERNAME) {
-        return session;
-      }
-      // A pending password-change token must never authorize business routes.
-      // changePassword uses getSession directly, so the required change still works.
-      const credential = getCredential(session.employee_no);
-      if (!credential || Number(credential.must_change_password) === 1) return null;
-      return session;
+      return getSession(token);
     },
 
     async getAuthorizationContext(session) {

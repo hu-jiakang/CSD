@@ -1,4 +1,4 @@
-import { rowsToObjects, escapeKingdeeValue } from "../utils/kingdee.js";
+import { rowsToObjects, escapeKingdeeValue, buildOrganizationFilter } from "../utils/kingdee.js";
 import { getEmployee as getLocalEmployee, replaceEmployees } from "../database/kingdeeDataRepository.js";
 
 const EMPLOYEE_FIELDS = [
@@ -57,7 +57,7 @@ function getRoleCode(row) {
   return "";
 }
 
-export function createEmployeeService({ kingdeeClient }) {
+export function createEmployeeService({ kingdeeClient, scope }) {
   return {
     async getEmployeeByEmployeeNo(employeeNo) {
       const no = clean(employeeNo);
@@ -69,7 +69,7 @@ export function createEmployeeService({ kingdeeClient }) {
       let rows = await kingdeeClient.executeBillQuery({
         formId: "BD_Empinfo",
         fieldKeys: EMPLOYEE_FIELDS,
-        filterString: `FStaffNumber = '${escapeKingdeeValue(no)}'`,
+        filterString: `(${buildOrganizationFilter(scope.organizationField, scope.organization)}) AND (FStaffNumber = '${escapeKingdeeValue(no)}')`,
         orderString: "FStaffNumber ASC",
         startRow: 0,
         limit: 10,

@@ -175,7 +175,7 @@ function mapStore(row, territoryLookup, customerLookup) {
     brand: clean(row["F_RTA_Brand.FNumber"]),
     psOrFlStore: ASSISTANT_PS_NAMES[assistantPSCode] || "",
     marketingChannel: clean(row["F_RTA_MarketingChannel.FNumber"]),
-    storeType: clean(row.FStockType),
+    storeType: clean(row["F_PARV_StoreType.FName"]),
     mainLineOfProducts: MAIN_LINE_NAMES[clean(row.F_RTA_MainLine)] || clean(row.F_RTA_MainLine),
     customerCode,
     customerName: clean(row["FCustomerId.FName"]),

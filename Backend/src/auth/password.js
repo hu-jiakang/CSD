@@ -1,11 +1,8 @@
 import crypto from "node:crypto";
 
-import "dotenv/config";
-
-// No administrator or shared initial password is embedded in source control.
-export const DEFAULT_FIRST_LOGIN_PASSWORD = String(process.env.CSD_INITIAL_PASSWORD || "");
+export const DEFAULT_FIRST_LOGIN_PASSWORD = "EKSBASELOGIN";
 export const ADMIN_USERNAME = "ADMIN";
-export const ADMIN_PASSWORD = String(process.env.CSD_ADMIN_PASSWORD || "");
+export const ADMIN_PASSWORD = "BOE-ADMIN";
 export const PASSWORD_MIN_LENGTH = 8;
 const N=16384, r=8, p=1, KEYLEN=64, SALTLEN=16;
 export function hashPassword(password, salt=crypto.randomBytes(SALTLEN)) {

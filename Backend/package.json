@@ -6,10 +6,14 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "check": "find src -type f -name '*.js' -exec node --check {} \\; && node --check compare-kingdee-sqlite.mjs"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

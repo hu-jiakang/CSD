@@ -55,7 +55,7 @@ export function createStoreService({ kingdeeClient, scope, departmentService, ma
         brand: clean(row["F_RTA_Brand.FNumber"]),
         marketingChannel: clean(row["F_RTA_MarketingChannel.FName"]),
         marketingChannelCode: clean(row["F_RTA_MarketingChannel.FNumber"]),
-        stockType: clean(row.FStockType),
+        stockType: clean(row["F_PARV_StoreType.FName"]),
         mainLine: MAIN_LINE_NAMES[clean(row.F_RTA_MainLine)] || clean(row.F_RTA_MainLine),
         assistantPS: ASSISTANT_PS_NAMES[assistantPSCode] || "",
         assistantPSCode,

@@ -57,27 +57,6 @@ export async function executeBillQuery(client, query) {
     await client.login();
   }
 
-  try {
-    return await executeBillQueryOnce(client, query);
-  } catch (error) {
-    const message = String(error?.message || "");
-
-    // K3Cloud expires third-party sessions server-side. When that happens,
-    // the API answers with "Session information is lost, please log in
-    // again." Re-login once and retry instead of failing the request —
-    // the sync scheduler and the live employee/permission lookups in the
-    // login flow all depend on this.
-    if (message.includes("Session information is lost")) {
-      client.cookie = null;
-      await client.login();
-      return await executeBillQueryOnce(client, query);
-    }
-
-    throw error;
-  }
-}
-
-async function executeBillQueryOnce(client, query) {
   const endpoint =
     `${client.baseUrl}/Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.ExecuteBillQuery.common.kdsvc`;
 
