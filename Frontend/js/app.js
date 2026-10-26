@@ -1,6 +1,7 @@
-const FRONTEND_VERSION = "24.55";
+const FRONTEND_VERSION = "24.56";
 const state = {
   token: sessionStorage.getItem("csd_token") || "",
+  loginInProgress: false,
   dingtalk: {
     attempted: false,
     loading: false,
@@ -96,8 +97,6 @@ function currentStoreCode() {
 function render() {
   if (state.token) {
     document.body.innerHTML = dashboardHtml();
-  } else if (isDingTalkEnvironment() && !state.dingtalk.attempted) {
-    document.body.innerHTML = "";
   } else {
     document.body.innerHTML = loginHtml();
   }
@@ -130,6 +129,8 @@ function loginHtml() {
 
         <div id="loginError" class="login-message" role="alert"></div>
         <button class="login-button" type="submit">Sign In</button>
+        <button id="dingtalkLoginBtn" class="login-button dingtalk-login-button hidden" type="button">Sign in with DingTalk</button>
+        <div id="dingtalkLoginMessage" class="login-message" role="status" aria-live="polite"></div>
         <div class="login-note">Forgot your password? Please contact BOE</div>
       </form>
 
@@ -830,7 +831,7 @@ async function api(path, options = {}) {
   // A 401 from the login endpoint is a normal authentication failure and
   // must be shown on the login screen. Only treat 401 as session expiry
   // when an authenticated request was already in progress.
-  if (res.status === 401 && path !== "/api/auth/login") {
+  if (res.status === 401 && state.token && path !== "/api/auth/login" && path !== "/api/auth/dingtalk") {
     sessionStorage.removeItem("csd_token");
     state.token = "";
     render();
@@ -845,6 +846,8 @@ function isDingTalkEnvironment() {
 }
 
 function updateDingTalkLoginUi() {
+  const passwordButton = $("#loginForm button[type=submit]");
+  if (passwordButton) passwordButton.disabled = state.loginInProgress;
   const button = $("#dingtalkLoginBtn");
   const message = $("#dingtalkLoginMessage");
   if (!button || !message) return;
@@ -857,7 +860,7 @@ function updateDingTalkLoginUi() {
     return;
   }
 
-  button.disabled = state.dingtalk.loading;
+  button.disabled = state.loginInProgress;
   button.textContent = state.dingtalk.loading
     ? "Connecting to DingTalk..."
     : "Sign in with DingTalk";
@@ -876,25 +879,15 @@ async function requestDingTalkAuthCode(config) {
     throw new Error("DingTalk SSO configuration is incomplete.");
   }
 
-  await new Promise((resolve, reject) => {
-    if (typeof window.dd.ready !== "function") {
-      resolve();
-      return;
-    }
-
-    window.dd.ready(resolve);
-    if (typeof window.dd.error === "function") {
-      window.dd.error((error) => {
-        reject(new Error(error?.message || "DingTalk JSAPI initialization failed."));
-      });
-    }
-  });
-
+  // The backend exchanges a micro-app code through topapi/v2/user/getuserinfo.
+  // Prefer the matching legacy JSAPI and its onSuccess/onFail callbacks.
+  const permission = window.dd.runtime?.permission;
+  const legacyApi = typeof permission?.requestAuthCode === "function";
   const authFn =
-    typeof window.dd.requestAuthCode === "function"
-      ? window.dd.requestAuthCode.bind(window.dd)
-      : typeof window.dd.runtime?.permission?.requestAuthCode === "function"
-        ? window.dd.runtime.permission.requestAuthCode.bind(window.dd.runtime.permission)
+    legacyApi
+      ? permission.requestAuthCode.bind(permission)
+      : typeof window.dd.requestAuthCode === "function"
+        ? window.dd.requestAuthCode.bind(window.dd)
         : null;
 
   if (!authFn) {
@@ -902,30 +895,55 @@ async function requestDingTalkAuthCode(config) {
   }
 
   return new Promise((resolve, reject) => {
-    authFn({
-      corpId,
-      success: (result) => {
-        const code = clean(result?.code || result?.authCode);
-        if (!code) {
-          reject(new Error("DingTalk did not return an authorization code."));
-          return;
-        }
-        resolve(code);
-      },
-      fail: (error) => {
-        const detail = typeof error === "string"
-          ? error
-          : error?.message || error?.errorMessage || "";
-        reject(new Error(detail || "DingTalk authorization failed."));
-      },
-    });
+    let settled = false;
+    const finish = (error, code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve(code);
+    };
+    const timer = setTimeout(() => finish(new Error("DingTalk authorization timed out. Please try again.")), 15000);
+    const onSuccess = (result) => {
+      const code = clean(result?.code || result?.authCode);
+      if (!code) {
+        finish(new Error("DingTalk did not return an authorization code."));
+        return;
+      }
+      finish(null, code);
+    };
+    const onFail = (error) => {
+      const detail = typeof error === "string"
+        ? error
+        : error?.message || error?.errorMessage || error?.errMsg || "";
+      finish(new Error(detail || "DingTalk authorization failed."));
+    };
+    const authorize = () => {
+      if (settled) return;
+      try {
+        const result = authFn(legacyApi
+          ? { corpId, onSuccess, onFail }
+          : { corpId, clientId: clean(config?.clientId), success: onSuccess, fail: onFail });
+        if (typeof result?.then === "function") result.then(onSuccess, onFail);
+      } catch (error) {
+        onFail(error);
+      }
+    };
+    try {
+      if (typeof window.dd.error === "function") window.dd.error(onFail);
+      if (typeof window.dd.ready === "function") window.dd.ready(authorize);
+      else authorize();
+    } catch (error) {
+      onFail(error);
+    }
   });
 }
 
 async function loginWithDingTalk() {
-  if (!isDingTalkEnvironment()) return;
+  if (!isDingTalkEnvironment() || state.loginInProgress || state.token) return;
 
   const error = $("#loginError");
+  state.loginInProgress = true;
   state.dingtalk.loading = true;
   state.dingtalk.error = "";
   if (error) error.textContent = "";
@@ -949,10 +967,12 @@ async function loginWithDingTalk() {
     state.dingtalk.error = "";
     await loadMe();
   } catch (err) {
+    state.token = "";
+    sessionStorage.removeItem("csd_token");
     state.dingtalk.error = err.message || "Unable to sign in with DingTalk.";
-    if (error) error.textContent = state.dingtalk.error;
   } finally {
     state.dingtalk.loading = false;
+    state.loginInProgress = false;
     updateDingTalkLoginUi();
   }
 }
@@ -990,16 +1010,19 @@ async function autoLoginWithDingTalk() {
   } catch (err) {
     state.dingtalk.error = err.message || "DingTalk automatic sign-in failed.";
     state.dingtalk.loading = false;
-    render();
+    updateDingTalkLoginUi();
   }
 }
 async function login(e) {
   e.preventDefault();
+  if (state.loginInProgress || state.token) return;
+  state.loginInProgress = true;
   const error = $("#loginError");
   const button = $(".login-button");
   error.textContent = "";
   button.disabled = true;
   button.textContent = "Signing In...";
+  updateDingTalkLoginUi();
   try {
     const result = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ employeeNo: $("#employeeNo").value.trim(), password: $("#password").value }) });
     if (result.requiresPasswordChange) await firstLoginPasswordChange(result.passwordChangeToken); else {
@@ -1010,9 +1033,14 @@ async function login(e) {
     sessionStorage.setItem("csd_token", state.token);
     await loadMe();
   } catch (err) {
+    state.token = "";
+    sessionStorage.removeItem("csd_token");
     error.textContent = err.message;
     button.disabled = false;
     button.textContent = "Sign In";
+  } finally {
+    state.loginInProgress = false;
+    updateDingTalkLoginUi();
   }
 }
 
