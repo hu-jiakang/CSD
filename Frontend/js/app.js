@@ -1,9 +1,10 @@
-const FRONTEND_VERSION = "24.56";
+const FRONTEND_VERSION = "24.57";
 const state = {
   token: sessionStorage.getItem("csd_token") || "",
   loginInProgress: false,
   dingtalk: {
     attempted: false,
+    autoLoginCancelled: false,
     loading: false,
     available: false,
     error: "",
@@ -978,12 +979,13 @@ async function loginWithDingTalk() {
 }
 
 async function autoLoginWithDingTalk() {
-  if (state.token || state.dingtalk.attempted || !isDingTalkEnvironment()) return;
+  if (state.token || state.dingtalk.attempted || state.dingtalk.autoLoginCancelled || !isDingTalkEnvironment()) return;
 
   state.dingtalk.attempted = true;
 
   try {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
+    for (let attempt = 0; attempt < 150; attempt += 1) {
+      if (state.dingtalk.autoLoginCancelled) return;
       const hasAuthApi =
         window.dd &&
         (
@@ -994,6 +996,8 @@ async function autoLoginWithDingTalk() {
       if (hasAuthApi) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
+
+    if (state.dingtalk.autoLoginCancelled) return;
 
     const hasAuthApi =
       window.dd &&
@@ -1402,6 +1406,7 @@ async function submitAdminReset() {
 }
 
 async function logout() {
+  state.dingtalk.autoLoginCancelled = true;
   try { if (state.token) await api("/api/auth/logout", { method: "POST" }); } catch {}
   sessionStorage.removeItem("csd_token");
   state.token = "";
@@ -1439,9 +1444,24 @@ function showToast(message, isError = false) {
   setTimeout(() => t.className = "toast", 2600);
 }
 
-render();
-if (state.token) {
-  loadMe().catch(() => logout());
-} else {
-  void autoLoginWithDingTalk();
+async function initializeAuthentication() {
+  if (state.token) {
+    try {
+      await loadMe();
+      return;
+    } catch {
+      if (state.dingtalk.autoLoginCancelled) return;
+      // A stored dashboard session can expire while the DingTalk session is
+      // still valid. Re-enter SSO after clearing that stale local session.
+      sessionStorage.removeItem("csd_token");
+      state.token = "";
+      state.employee = null;
+      state.access = null;
+      render();
+    }
+  }
+  await autoLoginWithDingTalk();
 }
+
+render();
+initializeAuthentication();

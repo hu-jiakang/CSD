@@ -5,15 +5,16 @@ const vm = require("node:vm");
 
 const source = readFileSync(require.resolve("../js/app.js"), "utf8");
 
-function createPage({ dd = {}, fetch = async () => { throw new Error("Unexpected request"); } } = {}) {
+function createPage({ dd = {}, storedToken = "", userAgent = "Browser", fetch = async () => { throw new Error("Unexpected request"); } } = {}) {
   const storage = new Map();
+  if (storedToken) storage.set("csd_token", storedToken);
   const document = {
     body: { innerHTML: "" },
     querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener() {},
   };
-  const window = { dd, navigator: { userAgent: "Browser" } };
+  const window = { dd, navigator: { userAgent } };
   const context = vm.createContext({
     window, document, fetch, Headers, URLSearchParams, console, setTimeout, clearTimeout,
     sessionStorage: {
@@ -22,9 +23,9 @@ function createPage({ dd = {}, fetch = async () => { throw new Error("Unexpected
       removeItem: (key) => storage.delete(key),
     },
   });
-  vm.runInContext(source, context);
+  const startup = vm.runInContext(source, context);
   window.navigator.userAgent = "DingTalk";
-  return { context, document, storage, run: (code) => vm.runInContext(code, context) };
+  return { context, document, storage, startup, run: (code) => vm.runInContext(code, context) };
 }
 
 async function settles(promise) {
@@ -172,3 +173,156 @@ for (const method of ["dingtalk", "password"]) {
     assert.equal(logins, 2);
   });
 }
+
+test("opening DingTalk with an expired stored session automatically signs in again", async () => {
+  const paths = [];
+  let meCalls = 0;
+  const page = createPage({
+    storedToken: "expired-session",
+    userAgent: "DingTalk",
+    dd: { runtime: { permission: { requestAuthCode: (options) => options.onSuccess({ code: "fresh-code" }) } } },
+    fetch: async (path) => {
+      paths.push(path);
+      if (path === "/api/auth/me") {
+        meCalls += 1;
+        if (meCalls === 1) return Response.json({ error: "Authentication required" }, { status: 401 });
+        return Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } });
+      }
+      if (path === "/api/auth/dingtalk/config") return Response.json({ corpId: "test-corp" });
+      if (path === "/api/auth/dingtalk") return Response.json({ token: "fresh-session" });
+      if (path.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+      throw new Error("Unexpected request: " + path);
+    },
+  });
+  await page.startup;
+  assert.equal(page.run("state.token"), "fresh-session");
+  assert.equal(page.storage.get("csd_token"), "fresh-session");
+  assert.equal(paths.filter((path) => path === "/api/auth/dingtalk").length, 1);
+  assert.equal(paths.includes("/api/auth/login"), false);
+  assert.match(page.document.body.innerHTML, /class="app-shell"/);
+});
+
+test("automatic SSO waits for a slow SDK instead of giving up after two seconds", async () => {
+  let polls = 0;
+  let logins = 0;
+  const page = createPage({ fetch: async (path) => {
+    if (path === "/api/auth/dingtalk/config") return Response.json({ corpId: "test-corp" });
+    if (path === "/api/auth/dingtalk") { logins += 1; return Response.json({ token: "fresh-session" }); }
+    if (path === "/api/auth/me") return Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } });
+    if (path.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+    throw new Error("Unexpected request: " + path);
+  } });
+  page.context.setTimeout = (callback, delay) => {
+    if (delay !== 100) return setTimeout(callback, delay);
+    polls += 1;
+    if (polls === 25) {
+      page.context.window.dd = { runtime: { permission: { requestAuthCode: (options) => options.onSuccess({ code: "slow-sdk-code" }) } } };
+    }
+    queueMicrotask(callback);
+    return 0;
+  };
+  await page.run("autoLoginWithDingTalk()");
+  assert.equal(logins, 1);
+  assert.equal(page.run("state.token"), "fresh-session");
+  assert.equal(page.run("state.dingtalk.error"), "");
+});
+
+test("a valid stored session is reused without requesting a new DingTalk code", async () => {
+  const paths = [];
+  const page = createPage({ storedToken: "valid-session", userAgent: "DingTalk", fetch: async (path) => {
+    paths.push(path);
+    if (path === "/api/auth/me") return Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } });
+    if (path.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+    throw new Error("Unexpected request: " + path);
+  } });
+  await page.startup;
+  assert.equal(page.run("state.token"), "valid-session");
+  assert.equal(paths.includes("/api/auth/dingtalk/config"), false);
+  assert.match(page.document.body.innerHTML, /class="app-shell"/);
+});
+
+test("an expired session in an ordinary browser leaves password login available", async () => {
+  const paths = [];
+  const page = createPage({ storedToken: "expired-session", fetch: async (path) => {
+    paths.push(path);
+    return Response.json({ error: "Authentication required" }, { status: 401 });
+  } });
+  page.context.window.navigator.userAgent = "Browser";
+  await page.startup;
+  assert.equal(page.run("state.token"), "");
+  assert.deepEqual(paths, ["/api/auth/me"]);
+  assert.match(page.document.body.innerHTML, /id="loginForm"/);
+});
+
+test("explicit logout does not immediately sign the user back in through SSO", async () => {
+  const paths = [];
+  const page = createPage({ fetch: async (path) => {
+    paths.push(path);
+    return Response.json({ success: true });
+  } });
+  page.run('state.token = "active-session"; sessionStorage.setItem("csd_token", "active-session")');
+  await page.run("logout()");
+  assert.deepEqual(paths, ["/api/auth/logout"]);
+  assert.equal(page.run("state.token"), "");
+  assert.match(page.document.body.innerHTML, /id="loginForm"/);
+});
+
+test("explicit logout cancels automatic recovery of an in-flight startup session check", async () => {
+  const paths = [];
+  let rejectStartup;
+  let meCalls = 0;
+  const page = createPage({
+    storedToken: "old-session", userAgent: "DingTalk",
+    dd: { runtime: { permission: { requestAuthCode: (options) => options.onSuccess({ code: "fresh-code" }) } } },
+    fetch: async (path) => {
+      paths.push(path);
+      if (path === "/api/auth/me") {
+        if (++meCalls === 1) return new Promise((_, reject) => { rejectStartup = reject; });
+        return Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } });
+      }
+      if (path === "/api/auth/logout") return Response.json({ success: true });
+      if (path === "/api/auth/dingtalk/config") return Response.json({ corpId: "test-corp" });
+      if (path === "/api/auth/dingtalk") return Response.json({ token: "fresh-session" });
+      if (path.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+      throw new Error("Unexpected request: " + path);
+    },
+  });
+  await page.run("logout()");
+  rejectStartup(new Error("Startup session check failed"));
+  await page.startup;
+  assert.equal(page.run("state.token"), "");
+  assert.equal(paths.includes("/api/auth/dingtalk/config"), false);
+});
+
+test("explicit logout cancels automatic SSO while waiting for the SDK", async () => {
+  const paths = [];
+  let releasePoll;
+  const page = createPage({ fetch: async (path) => {
+    paths.push(path);
+    throw new Error("Automatic login must be cancelled");
+  } });
+  page.context.setTimeout = (callback) => { releasePoll = callback; return 0; };
+  const automaticLogin = page.run("autoLoginWithDingTalk()");
+  await page.run("logout()");
+  releasePoll();
+  await automaticLogin;
+  assert.deepEqual(paths, []);
+  assert.equal(page.run("state.dingtalk.error"), "");
+});
+
+test("manual DingTalk sign-in remains available after explicit logout", async () => {
+  const page = createPage({
+    dd: { runtime: { permission: { requestAuthCode: (options) => options.onSuccess({ code: "manual-code" }) } } },
+    fetch: async (path) => {
+      if (path === "/api/auth/dingtalk/config") return Response.json({ corpId: "test-corp" });
+      if (path === "/api/auth/dingtalk") return Response.json({ token: "manual-session" });
+      if (path === "/api/auth/me") return Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } });
+      if (path.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+      throw new Error("Unexpected request: " + path);
+    },
+  });
+  await page.run("logout()");
+  await page.run("loginWithDingTalk()");
+  assert.equal(page.run("state.token"), "manual-session");
+  assert.equal(page.storage.get("csd_token"), "manual-session");
+});

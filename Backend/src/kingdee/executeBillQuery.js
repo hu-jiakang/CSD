@@ -52,11 +52,32 @@ function extractError(result) {
   return message || "Kingdee query returned an unsuccessful response.";
 }
 
+class KingdeeSessionExpiredError extends Error {}
+
+function queryError(result) {
+  const message = extractError(result);
+  return message === "Session information is lost, please log in again."
+    ? new KingdeeSessionExpiredError(message)
+    : new Error(message);
+}
+
 export async function executeBillQuery(client, query) {
   if (!client.cookie) {
     await client.login();
   }
 
+  try {
+    return await requestBillQuery(client, query);
+  } catch (error) {
+    if (!(error instanceof KingdeeSessionExpiredError)) throw error;
+    // Refresh only an explicit expired-session response. The second query is
+    // outside the catch so another rejection cannot cause a retry loop.
+    await client.login();
+    return requestBillQuery(client, query);
+  }
+}
+
+async function requestBillQuery(client, query) {
   const endpoint =
     `${client.baseUrl}/Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.ExecuteBillQuery.common.kdsvc`;
 
@@ -92,14 +113,14 @@ export async function executeBillQuery(client, query) {
       : result[0];
 
     if (firstItem?.Result?.ResponseStatus?.IsSuccess === false) {
-      throw new Error(extractError(firstItem));
+      throw queryError(firstItem);
     }
 
     return result;
   }
 
   if (result?.Result?.ResponseStatus?.IsSuccess === false) {
-    throw new Error(extractError(result));
+    throw queryError(result);
   }
 
   if (Array.isArray(result?.Result?.Result)) return result.Result.Result;
