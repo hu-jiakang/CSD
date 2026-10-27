@@ -455,6 +455,7 @@ body.modal-open { overflow: hidden; }
 }
 
 /* DingTalk SSO */
+body.auth-loading { background: #fff; }
 .dingtalk-login-button { margin-top: 10px; }
 .login-message:empty { min-height: 0; }
 

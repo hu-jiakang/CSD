@@ -1,8 +1,9 @@
-const FRONTEND_VERSION = "24.57";
+const FRONTEND_VERSION = "24.58";
 const state = {
   token: sessionStorage.getItem("csd_token") || "",
   loginInProgress: false,
   dingtalk: {
+    initializing: isDingTalkEnvironment(),
     attempted: false,
     autoLoginCancelled: false,
     loading: false,
@@ -96,6 +97,11 @@ function currentStoreCode() {
 }
 
 function render() {
+  document.body.classList.toggle("auth-loading", state.dingtalk.initializing);
+  if (state.dingtalk.initializing) {
+    document.body.innerHTML = "";
+    return;
+  }
   if (state.token) {
     document.body.innerHTML = dashboardHtml();
   } else {
@@ -1407,6 +1413,7 @@ async function submitAdminReset() {
 
 async function logout() {
   state.dingtalk.autoLoginCancelled = true;
+  state.dingtalk.initializing = false;
   try { if (state.token) await api("/api/auth/logout", { method: "POST" }); } catch {}
   sessionStorage.removeItem("csd_token");
   state.token = "";
@@ -1445,22 +1452,29 @@ function showToast(message, isError = false) {
 }
 
 async function initializeAuthentication() {
-  if (state.token) {
-    try {
-      await loadMe();
-      return;
-    } catch {
-      if (state.dingtalk.autoLoginCancelled) return;
-      // A stored dashboard session can expire while the DingTalk session is
-      // still valid. Re-enter SSO after clearing that stale local session.
-      sessionStorage.removeItem("csd_token");
-      state.token = "";
-      state.employee = null;
-      state.access = null;
+  try {
+    if (state.token) {
+      try {
+        await loadMe();
+        return;
+      } catch {
+        if (state.dingtalk.autoLoginCancelled) return;
+        // A stored dashboard session can expire while the DingTalk session is
+        // still valid. Re-enter SSO after clearing that stale local session.
+        sessionStorage.removeItem("csd_token");
+        state.token = "";
+        state.employee = null;
+        state.access = null;
+        render();
+      }
+    }
+    await autoLoginWithDingTalk();
+  } finally {
+    if (state.dingtalk.initializing) {
+      state.dingtalk.initializing = false;
       render();
     }
   }
-  await autoLoginWithDingTalk();
 }
 
 render();

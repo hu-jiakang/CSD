@@ -8,8 +8,16 @@ const source = readFileSync(require.resolve("../js/app.js"), "utf8");
 function createPage({ dd = {}, storedToken = "", userAgent = "Browser", fetch = async () => { throw new Error("Unexpected request"); } } = {}) {
   const storage = new Map();
   if (storedToken) storage.set("csd_token", storedToken);
+  const bodyClasses = new Set();
+  const renders = [];
   const document = {
-    body: { innerHTML: "" },
+    body: {
+      get innerHTML() { return renders.at(-1) || ""; },
+      set innerHTML(html) { renders.push(html); },
+      classList: {
+        toggle(name, enabled) { if (enabled) bodyClasses.add(name); else bodyClasses.delete(name); },
+      },
+    },
     querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener() {},
@@ -25,7 +33,7 @@ function createPage({ dd = {}, storedToken = "", userAgent = "Browser", fetch = 
   });
   const startup = vm.runInContext(source, context);
   window.navigator.userAgent = "DingTalk";
-  return { context, document, storage, startup, run: (code) => vm.runInContext(code, context) };
+  return { context, document, storage, startup, renders, bodyClasses, run: (code) => vm.runInContext(code, context) };
 }
 
 async function settles(promise) {
@@ -39,6 +47,88 @@ async function settles(promise) {
     clearTimeout(timer);
   }
 }
+
+test("DingTalk startup stays blank while waiting for the SDK, then shows a retry on failure", async () => {
+  const page = createPage({ userAgent: "DingTalk" });
+  assert.equal(page.document.body.innerHTML, "");
+  assert.equal(page.bodyClasses.has("auth-loading"), true);
+  page.context.setTimeout = (callback) => { queueMicrotask(callback); return 0; };
+  await page.startup;
+  assert.match(page.document.body.innerHTML, /id="loginForm"/);
+  assert.match(page.document.body.innerHTML, /id="dingtalkLoginBtn"/);
+  assert.match(page.run("state.dingtalk.error"), /not available/);
+  assert.equal(page.bodyClasses.has("auth-loading"), false);
+});
+
+test("DingTalk startup stays blank through configuration, authorization, and user lookup", async () => {
+  let releaseConfig;
+  let authorize;
+  let releaseUser;
+  let userRequested;
+  const userRequest = new Promise((resolve) => { userRequested = resolve; });
+  const page = createPage({
+    userAgent: "DingTalk",
+    dd: { runtime: { permission: { requestAuthCode(options) { authorize = options.onSuccess; } } } },
+    fetch: async (path) => {
+      if (path === "/api/auth/dingtalk/config") return new Promise((resolve) => { releaseConfig = resolve; });
+      if (path === "/api/auth/dingtalk") return Response.json({ token: "fresh-session" });
+      if (path === "/api/auth/me") {
+        userRequested();
+        return new Promise((resolve) => { releaseUser = resolve; });
+      }
+      if (path.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+      throw new Error("Unexpected request: " + path);
+    },
+  });
+  assert.equal(page.document.body.innerHTML, "");
+  releaseConfig(Response.json({ corpId: "test-corp" }));
+  while (!authorize) await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(page.document.body.innerHTML, "");
+  authorize({ code: "test-code" });
+  await userRequest;
+  assert.equal(page.document.body.innerHTML, "");
+  releaseUser(Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } }));
+  await page.startup;
+  assert.match(page.document.body.innerHTML, /class="app-shell"/);
+  assert.equal(page.renders.some((html) => html.includes('id="loginForm"')), false);
+  assert.equal(page.bodyClasses.has("auth-loading"), false);
+});
+
+for (const expired of [false, true]) {
+  test(`DingTalk startup never flashes login while ${expired ? "recovering an expired" : "checking a valid"} stored session`, async () => {
+    let releaseUser;
+    let meCalls = 0;
+    const page = createPage({
+      storedToken: "stored-session", userAgent: "DingTalk",
+      dd: { runtime: { permission: { requestAuthCode: (options) => options.onSuccess({ code: "fresh-code" }) } } },
+      fetch: async (path) => {
+        if (path === "/api/auth/me") {
+          if (++meCalls === 1) return new Promise((resolve) => { releaseUser = resolve; });
+          return Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } });
+        }
+        if (path === "/api/auth/dingtalk/config") return Response.json({ corpId: "test-corp" });
+        if (path === "/api/auth/dingtalk") return Response.json({ token: "fresh-session" });
+        if (path.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+        throw new Error("Unexpected request: " + path);
+      },
+    });
+    assert.equal(page.document.body.innerHTML, "");
+    releaseUser(expired
+      ? Response.json({ error: "Authentication required" }, { status: 401 })
+      : Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } }));
+    await page.startup;
+    assert.equal(page.renders.some((html) => html.includes('id="loginForm"')), false);
+    assert.match(page.document.body.innerHTML, /class="app-shell"/);
+    assert.equal(page.bodyClasses.has("auth-loading"), false);
+  });
+}
+
+test("ordinary browser startup shows password login immediately", async () => {
+  const page = createPage();
+  assert.match(page.document.body.innerHTML, /id="loginForm"/);
+  assert.equal(page.bodyClasses.has("auth-loading"), false);
+  await page.startup;
+});
 
 test("micro-app authorization accepts legacy onSuccess callbacks", async () => {
   const page = createPage({ dd: {
@@ -289,6 +379,8 @@ test("explicit logout cancels automatic recovery of an in-flight startup session
   });
   await page.run("logout()");
   rejectStartup(new Error("Startup session check failed"));
+  assert.match(page.document.body.innerHTML, /id="loginForm"/);
+  assert.equal(page.bodyClasses.has("auth-loading"), false);
   await page.startup;
   assert.equal(page.run("state.token"), "");
   assert.equal(paths.includes("/api/auth/dingtalk/config"), false);
