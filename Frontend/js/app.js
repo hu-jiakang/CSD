@@ -1,4 +1,4 @@
-const FRONTEND_VERSION = "24.58";
+const FRONTEND_VERSION = "24.59";
 const state = {
   token: sessionStorage.getItem("csd_token") || "",
   loginInProgress: false,
@@ -831,21 +831,38 @@ async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (state.token) headers.set("Authorization", `Bearer ${state.token}`);
   if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-  const res = await fetch(path, { ...options, headers, credentials: "include" });
-  const text = await res.text();
-  let data = {};
-  try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text }; }
-  // A 401 from the login endpoint is a normal authentication failure and
-  // must be shown on the login screen. Only treat 401 as session expiry
-  // when an authenticated request was already in progress.
-  if (res.status === 401 && state.token && path !== "/api/auth/login" && path !== "/api/auth/dingtalk") {
-    sessionStorage.removeItem("csd_token");
-    state.token = "";
-    render();
-    throw new Error("Your session has expired. Please sign in again.");
+  const controller = path.startsWith("/api/auth/") ? new AbortController() : null;
+  let timeout;
+  let timedOut = false;
+  try {
+    if (controller) {
+      // Keep the deadline active through body reading, not just response headers.
+      timeout = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, 15000);
+    }
+    const res = await fetch(path, { ...options, headers, credentials: "include", signal: controller ? controller.signal : options.signal });
+    const text = await res.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text }; }
+    // A 401 from the login endpoint is a normal authentication failure and
+    // must be shown on the login screen. Only treat 401 as session expiry
+    // when an authenticated request was already in progress.
+    if (res.status === 401 && state.token && path !== "/api/auth/login" && path !== "/api/auth/dingtalk") {
+      sessionStorage.removeItem("csd_token");
+      state.token = "";
+      render();
+      throw new Error("Your session has expired. Please sign in again.");
+    }
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  } catch (err) {
+    if (timedOut) throw new Error("Sign-in request timed out. Please try again.");
+    throw err;
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
   }
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
 }
 
 function isDingTalkEnvironment() {

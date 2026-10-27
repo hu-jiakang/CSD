@@ -5,7 +5,7 @@ const vm = require("node:vm");
 
 const source = readFileSync(require.resolve("../js/app.js"), "utf8");
 
-function createPage({ dd = {}, storedToken = "", userAgent = "Browser", fetch = async () => { throw new Error("Unexpected request"); } } = {}) {
+function createPage({ dd = {}, storedToken = "", userAgent = "Browser", timers = { setTimeout, clearTimeout }, fetch = async () => { throw new Error("Unexpected request"); } } = {}) {
   const storage = new Map();
   if (storedToken) storage.set("csd_token", storedToken);
   const bodyClasses = new Set();
@@ -24,7 +24,8 @@ function createPage({ dd = {}, storedToken = "", userAgent = "Browser", fetch = 
   };
   const window = { dd, navigator: { userAgent } };
   const context = vm.createContext({
-    window, document, fetch, Headers, URLSearchParams, console, setTimeout, clearTimeout,
+    window, document, fetch, Headers, URLSearchParams, AbortController, console,
+    setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout,
     sessionStorage: {
       getItem: (key) => storage.get(key) || null,
       setItem: (key, value) => storage.set(key, value),
@@ -128,6 +129,115 @@ test("ordinary browser startup shows password login immediately", async () => {
   assert.match(page.document.body.innerHTML, /id="loginForm"/);
   assert.equal(page.bodyClasses.has("auth-loading"), false);
   await page.startup;
+});
+
+function createClock() {
+  let now = 0;
+  const pending = new Map();
+  return {
+    setTimeout(callback, delay) {
+      const handle = {};
+      pending.set(handle, { callback, due: now + delay });
+      return handle;
+    },
+    clearTimeout(handle) { pending.delete(handle); },
+    advance(milliseconds) {
+      now += milliseconds;
+      for (const [handle, timer] of pending) {
+        if (timer.due <= now) {
+          pending.delete(handle);
+          timer.callback();
+        }
+      }
+    },
+  };
+}
+
+for (const path of ["/api/auth/dingtalk/config", "/api/auth/dingtalk", "/api/auth/me"]) {
+  for (const stage of ["headers", "body"]) {
+    test(`startup leaves the blank screen when ${path} stalls at response ${stage}, and retry works`, async () => {
+      const timers = createClock();
+      let stalled;
+      let shouldStall = true;
+      let aborted = false;
+      const pendingRequest = new Promise((resolve) => { stalled = resolve; });
+      const page = createPage({
+        userAgent: "DingTalk", timers,
+        dd: { runtime: { permission: { requestAuthCode: (options) => options.onSuccess({ code: "test-code" }) } } },
+        fetch: async (requestPath, options) => {
+          if (requestPath === path && shouldStall) {
+            const hang = () => new Promise((resolve, reject) => {
+              options.signal?.addEventListener("abort", () => {
+                aborted = true;
+                reject(new Error("Request aborted"));
+              }, { once: true });
+              stalled();
+            });
+            return stage === "headers" ? hang() : { status: 200, ok: true, text: hang };
+          }
+          if (requestPath === "/api/auth/dingtalk/config") return Response.json({ corpId: "test-corp" });
+          if (requestPath === "/api/auth/dingtalk") return Response.json({ token: "fresh-session" });
+          if (requestPath === "/api/auth/me") return Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } });
+          if (requestPath.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+          throw new Error("Unexpected request: " + requestPath);
+        },
+      });
+      await pendingRequest;
+      timers.advance(14999);
+      assert.equal(page.document.body.innerHTML, "");
+      timers.advance(1);
+      await settles(page.startup);
+      assert.equal(aborted, true);
+      assert.match(page.document.body.innerHTML, /id="loginForm"/);
+      assert.match(page.run("state.dingtalk.error"), /timed out.*try again/i);
+      assert.equal(page.bodyClasses.has("auth-loading"), false);
+      assert.equal(page.run("state.loginInProgress"), false);
+      assert.equal(page.storage.has("csd_token"), false);
+      shouldStall = false;
+      await page.run("loginWithDingTalk()");
+      assert.match(page.document.body.innerHTML, /class="app-shell"/);
+      assert.equal(page.run("state.token"), "fresh-session");
+    });
+  }
+}
+
+test("a stalled stored-session check times out and recovers with DingTalk SSO", async () => {
+  const timers = createClock();
+  let meCalls = 0;
+  const page = createPage({
+    storedToken: "old-session", userAgent: "DingTalk", timers,
+    dd: { runtime: { permission: { requestAuthCode: (options) => options.onSuccess({ code: "test-code" }) } } },
+    fetch: async (path, options) => {
+      if (path === "/api/auth/me") {
+        if (++meCalls === 1) return new Promise((resolve, reject) => {
+          options.signal?.addEventListener("abort", () => reject(new Error("Request aborted")), { once: true });
+        });
+        return Response.json({ employee: { employeeNo: "T001" }, access: { accessLevel: "HQ" } });
+      }
+      if (path === "/api/auth/dingtalk/config") return Response.json({ corpId: "test-corp" });
+      if (path === "/api/auth/dingtalk") return Response.json({ token: "recovered-session" });
+      if (path.startsWith("/api/dashboard-summary")) return Response.json({ areaRows: [] });
+      throw new Error("Unexpected request: " + path);
+    },
+  });
+  timers.advance(15000);
+  await settles(page.startup);
+  assert.match(page.document.body.innerHTML, /class="app-shell"/);
+  assert.equal(page.run("state.token"), "recovered-session");
+  assert.equal(page.renders.some((html) => html.includes('id="loginForm"')), false);
+});
+
+test("completed authentication requests clear their deadlines", async () => {
+  const timers = createClock();
+  let signal;
+  const page = createPage({ timers, fetch: async (path, options) => {
+    signal = options.signal;
+    return Response.json({ corpId: "test-corp" });
+  } });
+  await page.startup;
+  await page.run('api("/api/auth/dingtalk/config")');
+  timers.advance(15000);
+  assert.equal(signal.aborted, false);
 });
 
 test("micro-app authorization accepts legacy onSuccess callbacks", async () => {
